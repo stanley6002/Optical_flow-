@@ -83,17 +83,15 @@ int main (int argc, const char * argv[])
             if(_1stframe== false)
            {
                 imgA= frame;
-                
                 imgC= cvCloneImage(imgB);
                 //imgB= cvCloneImage(frame);
                 
                 cvCvtColor(imgA,imgGrayA, CV_BGR2GRAY);  
                 cvCvtColor(imgC,imgGrayB, CV_BGR2GRAY);  
-                
-                
+                   
                 cv::Mat flow_mat;
                 vector<Point2f> corners,nextPts; vector<uchar> status; vector<float> err;
-                goodFeaturesToTrack(imgGrayA, corners, 300, 0.001,10);
+                goodFeaturesToTrack(imgGrayA, corners, 500, 0.001,10);
                 cornerSubPix(imgGrayA, corners, Size(11,11), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
                 calcOpticalFlowPyrLK(imgGrayA, imgGrayB, corners, nextPts, status, err, Size(45,45));
               
@@ -105,12 +103,32 @@ int main (int argc, const char * argv[])
                        int location_y= corners[y].y;
                        float location_xB= nextPts[y].x;
                        float location_yB= nextPts[y].y;
+                       CvScalar s;
+                       //cout<<location_x<<" "<<location_y<<" "<<location_xB<<" "<<location_yB<<" "<<endl;
                        
-                 //    CvScalar s= cvGet2D(imgA, location_y, location_x);
-                       cvCircle(imgA, cvPoint(location_x, location_y), 1, CV_RGB(0, 255, 0), -1);
-                       cvCircle(imgB, cvPoint(location_xB, location_yB), 1, CV_RGB(0, 255, 0), -1);
-                //       cout<<location_x<<" "<<location_y<<" "<<location_xB<<" "<<location_yB<<" "<<endl;
-                       cout<<location_x<<" "<<location_y<<" "<<location_xB<<" "<<location_yB<<" "<<0<<" "<<0<<" "<<0<<endl;
+                        if(location_x <320-1 && location_y < 240-1)
+                         {
+                         
+                                                    
+                          if(location_x>0 && location_y >0)
+                           {
+                              //s.val[0]=0;
+                              //s.val[1]=0;
+                              //s.val[2]=0;                           
+                         
+                           //else
+                           //{
+                           //s = cvGet2D(imgA, location_x, location_y);
+                             s = cvGet2D(imgA,location_y, location_x);
+                             cvCircle(imgA, cvPoint(location_y, location_x), 1, CV_RGB(0, 255, 0), -1);
+                             cout<<location_x<<" "<<location_y<<" "<<location_xB<<" "<<location_yB<<" "<<s.val[0]<<" "<<s.val[1]<<" "<<s.val[2]<<" "<<endl;
+                           }
+                       }
+                       
+                       //cvCircle(imgA, cvPoint(location_y, location_x), 1, CV_RGB(0, 255, 0), -1);
+                       //cvCircle(imgB, cvPoint(location_xB, location_yB), 1, CV_RGB(0, 255, 0), -1);
+               
+                       // cout<<location_x<<" "<<location_y<<" "<<location_xB<<" "<<location_yB<<" "<<s.val[0]<<" "<<s.val[1]<<" "<<s.val[2]<<" "<<endl;
                    }
 //                 calcOpticalFlowFarneback( imgGrayA, imgGrayB, flow_mat, 0.1, 3, 15, 3, 5, 1.5,  cv::OPTFLOW_FARNEBACK_GAUSSIAN);                        
                
@@ -149,7 +167,7 @@ int main (int argc, const char * argv[])
 //                
 //                // printf("[%d] - Sheta:%lf, Length:%lf\n",i , fVecSetha, fVecLength);     
 //                
-                cvShowImage("frame1",imgB);
+                cvShowImage("frame1",imgA);
 //                //cout<<"test 1"<<endl;
 //                    cvShowImage("frame2",imgC);
             }        
