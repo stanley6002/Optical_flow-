@@ -128,8 +128,10 @@ int main (int argc, const char * argv[])
     
     //imgA = cvLoadImage("/P1_1.jpg", 3);
     //imgB = cvLoadImage("/P1_2.jpg", 3);
-    
     //int grabFrameRet;
+    
+    cout<<"second image"<<endl; 
+
     vector<Point2f> tempCorners;
     do 
         if ((cameraFrame = cvQueryFrame(camCapture))) 
@@ -158,108 +160,63 @@ int main (int argc, const char * argv[])
                 vector<float> err;
                 vector<Point2f> conersNew;
                
-               cv::Mat FAST_outputImg;
-               cv::Mat FAST_H_prev;       
-               
-               Ptr<FeatureDetector> FAST_detector;
-               vector<KeyPoint> FAST_train_kpts, FAST_query_kpts;
-               vector<Point2f> FAST_train_pts, FAST_query_pts;
-               Ptr<DescriptorExtractor> FAST_descriptor;
-               Mat FAST_train_desc, FAST_query_desc;
-               
-               cv::Ptr<cv::DescriptorMatcher> FAST_matcher;
-               std::vector<cv::DMatch> FAST_matches;
-               std::vector<unsigned char> FAST_match_mask;
-               
-               cv::FAST(imgGrayA, FAST_query_kpts, 70);
-               cv::FAST(imgGrayB, FAST_train_kpts, 70);
-               
-               cout<<FAST_query_kpts.size()<<endl;
-               FAST_detector = new cv::GridAdaptedFeatureDetector(new FastFeatureDetector(40, true),500, 2, 2);
-               FAST_matcher = cv::DescriptorMatcher::create("BruteForce-Hamming");
-               
-               FAST_descriptor = new cv::BriefDescriptorExtractor(16);
-              
-               FAST_detector->detect(imgGrayA, FAST_query_kpts);
-               FAST_descriptor->compute(imgGrayA, FAST_query_kpts, FAST_query_desc);
-              
-               FAST_detector->detect(imgGrayB, FAST_train_kpts);
-               FAST_descriptor->compute(imgGrayB, FAST_train_kpts, FAST_train_desc);
-            
-               std::vector<cv::KeyPoint> test_kpts;
-               FAST_H_prev = cv::Mat::eye(3,3,CV_32FC1);
-               
-               warpKeypoints(FAST_H_prev.inv(), FAST_query_kpts, test_kpts);
-
-               cv::Mat FAST_mask = windowedMatchingMask(test_kpts, FAST_train_kpts, 30, 30);
-               FAST_matcher->match(FAST_query_desc, FAST_train_desc, FAST_matches);
-               
-               int i=0;
-               for (; i< FAST_matches.size(); i++)
-               {
-                   int queryIdx = FAST_matches[i].queryIdx;
-                   int trainIdx = FAST_matches[i].trainIdx;
-                   
-                   CvPoint pt;
-                   CvPoint pt2;
-                   pt.x = FAST_query_kpts[queryIdx].pt.x;
-                   pt.y = FAST_query_kpts[queryIdx].pt.y;
-                   
-                   pt2.x = FAST_train_kpts[trainIdx].pt.x;
-                   pt2.y = FAST_train_kpts[trainIdx].pt.y;
-                   
-                   //cvCircle(imgA, cvPoint(pt.x, pt.y), 1, CV_RGB(0, 255, 0), -1);
-                   CvScalar s;
-                   //s = cvGet2D(imgA, location_x, location_y);
-                   //s = cvGet2D(imgA,pt.y, pt.x);
-                   cvCircle(imgA, cvPoint(pt.x, pt.y), 1, CV_RGB(0, 255, 0), -1);
-                   cout<<pt.x<<" "<<pt.y<<" "<<pt2.x<<" "<<pt2.y<<" "<<s.val[0]<<" "<<s.val[1]<<" "<<s.val[2]<<" "<<endl;
-                   
-                   
-                   
-                   //pts_query.push_back(query[dmatch.queryIdx].pt);
-                   //pts_train.push_back(train[dmatch.trainIdx].pt);
-                   
-               }
-               //std::vector<unsigned char> FAST_match_mask;
+                //std::vector<unsigned char> FAST_match_mask;
         
-               //if(_1sttrack==true)
-               //{
-               //    goodFeaturesToTrack(imgGrayB, corners, 500, 0.001,10);
-               //    cornerSubPix(imgGrayB, corners, Size(11,11), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
-               //    calcOpticalFlowPyrLK(imgGrayB, imgGrayA, corners, nextPts, status, err, Size(45,45));
+               if(_1sttrack==true)
+               {
+                   goodFeaturesToTrack(imgGrayB, corners, 100, 0.001,10);
+                   cornerSubPix(imgGrayB, corners, Size(11,11), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
+                   calcOpticalFlowPyrLK(imgGrayB, imgGrayA, corners, nextPts, status, err, Size(45,45));
                    _1sttrack=false;
                    tempCorners=nextPts;
-               //}
+               }
                
-               /*             
+                            
                if(_1sttrack==false)
                {
-                  cout<<(int) tempCorners.size()<<endl;
-                  goodFeaturesToTrack(imgGrayA, conersNew, 500, 0.001,10);
-                  cornerSubPix(imgGrayA, conersNew, Size(11,11), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
-                  
-                  nextPts = tempCorners;
-                  calcOpticalFlowPyrLK(imgGrayB, imgGrayA, tempCorners, corners, status, err, Size(45,45));
-                  tempCorners.clear();
-                  tempCorners=corners;
+                   //cout<<(int) tempCorners.size()<<endl;
                    
-                  cout<<(int) corners.size()<<endl;
-               }*/
+                  //goodFeaturesToTrack(imgGrayB, conersNew, 500, 0.001,10);
+                   cornerSubPix(imgGrayB, tempCorners, Size(11,11), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
+                  //nextPts = tempCorners;
+                  
+                   calcOpticalFlowPyrLK(imgGrayB, imgGrayA, tempCorners, corners, status, err, Size(45,45));
+                   
+                   cout<<endl;
+                   cout<<endl;
+                   cout<<"first frame : "<<endl;
+                   
+                   for ( int y = 0; y < (int) tempCorners.size(); y++ ) 
+                   {
+                       int location_x= tempCorners[y].x;
+                       int location_y= tempCorners[y].y;
+                       cout<<location_x<<" "<<location_y<<" "<<endl;
+                   }
+                   
+                   cout<<"next frame :"<<endl;
+                   cout<<endl;
+                   cout<<endl;
+                   
+                   
+                   for ( int y = 0; y < (int) corners.size(); y++ ) 
+                   {
+                       int location_x= corners[y].x;
+                       int location_y= corners[y].y;
+                       cout<<location_x<<" "<<location_y<<" "<<endl;
+                   }
+                   
+                   
+                   tempCorners.clear();
+                   tempCorners=corners;
+                   
+                  //cout<<(int) corners.size()<<endl;
+               }
                
-               //for ( int y = 0; y < (int) conersNew.size(); y++ ) 
-               //{
-               //    int location_x= conersNew[y].x;
-               //    int location_y= conersNew[y].y;
-               //    cout<<location_x<<" "<<location_y<<" "<<endl;
-               
-               //}
-               
-               cout<<"corners"<<endl;
-                
+                           
+                              
                imgB= cvCloneImage(frame);
-               
-                 /*for ( int y = 0; y < (int) corners.size(); y++ ) 
+               /*
+                 for ( int y = 0; y < (int) corners.size(); y++ ) 
                    {
                        int location_x= corners[y].x;
                        int location_y= corners[y].y;
@@ -284,7 +241,7 @@ int main (int argc, const char * argv[])
                              s = cvGet2D(imgA,location_y, location_x);
                              cvCircle(imgA, cvPoint(location_y, location_x), 1, CV_RGB(0, 255, 0), -1);
                              //cout<<location_x<<" "<<location_y<<" "<<location_xB<<" "<<location_yB<<" "<<s.val[0]<<" "<<s.val[1]<<" "<<s.val[2]<<" "<<endl;
-                           cout<<location_x<<" "<<location_y<<" "<<endl;
+                              cout<<location_x<<" "<<location_y<<" "<<endl;
                            }
                        }
                        
@@ -293,7 +250,7 @@ int main (int argc, const char * argv[])
                
                        // cout<<location_x<<" "<<location_y<<" "<<location_xB<<" "<<location_yB<<" "<<s.val[0]<<" "<<s.val[1]<<" "<<s.val[2]<<" "<<endl;
                    }
-                  */
+                 */ 
                   // _1stframe = false ;
 //                 calcOpticalFlowFarneback( imgGrayA, imgGrayB, flow_mat, 0.1, 3, 15, 3, 5, 1.5,  cv::OPTFLOW_FARNEBACK_GAUSSIAN);                        
                
@@ -327,7 +284,7 @@ int main (int argc, const char * argv[])
 //                }
 //                
 //                
-               cout<<"second image"<<endl; 
+//               cout<<"second image"<<endl; 
                flow_mat.release();
 //                
 //                // printf("[%d] - Sheta:%lf, Length:%lf\n",i , fVecSetha, fVecLength);     
