@@ -31,60 +31,60 @@ IplImage* skipNFrames(CvCapture* capture, int n);
 using namespace cv;
 using namespace std;
 
-void keypoints2points(const vector<KeyPoint>& in, vector<Point2f>& out)
-{
-    out.clear();
-    out.reserve(in.size());
-    for (size_t i = 0; i < in.size(); ++i)
-    {
-        out.push_back(in[i].pt);
-    }
-}
-
-//Takes an xy point and appends that to a keypoint structure
-void points2keypoints(const vector<Point2f>& in, vector<KeyPoint>& out)
-{
-    out.clear();
-    out.reserve(in.size());
-    for (size_t i = 0; i < in.size(); ++i)
-    {
-        out.push_back(KeyPoint(in[i], 1));
-    }
-}
-
-
-void warpKeypoints(const Mat& H, const vector<KeyPoint>& in, vector<KeyPoint>& out)
-{
-    vector<Point2f> pts;
-    keypoints2points(in, pts);
-    vector<Point2f> pts_w(pts.size());
-    Mat m_pts_w(pts_w);
-    perspectiveTransform(Mat(pts), m_pts_w, H);
-    points2keypoints(pts_w, out);
-}
-void matches2points(const vector<KeyPoint>& train, const vector<KeyPoint>& query,
-                    const std::vector<cv::DMatch>& matches, std::vector<cv::Point2f>& pts_train,
-                    std::vector<Point2f>& pts_query)
-{
-    
-    pts_train.clear();
-    pts_query.clear();
-    pts_train.reserve(matches.size());
-    pts_query.reserve(matches.size());
-    
-    size_t i = 0;
-    
-    for (; i < matches.size(); i++)
-    {
-        
-        const DMatch & dmatch = matches[i];
-        
-        pts_query.push_back(query[dmatch.queryIdx].pt);
-        pts_train.push_back(train[dmatch.trainIdx].pt);
-        
-    }
-    
-}
+//void keypoints2points(const vector<KeyPoint>& in, vector<Point2f>& out)
+//{
+//    out.clear();
+//    out.reserve(in.size());
+//    for (size_t i = 0; i < in.size(); ++i)
+//    {
+//        out.push_back(in[i].pt);
+//    }
+//}
+//
+////Takes an xy point and appends that to a keypoint structure
+//void points2keypoints(const vector<Point2f>& in, vector<KeyPoint>& out)
+//{
+//    out.clear();
+//    out.reserve(in.size());
+//    for (size_t i = 0; i < in.size(); ++i)
+//    {
+//        out.push_back(KeyPoint(in[i], 1));
+//    }
+//}
+//
+//
+//void warpKeypoints(const Mat& H, const vector<KeyPoint>& in, vector<KeyPoint>& out)
+//{
+//    vector<Point2f> pts;
+//    keypoints2points(in, pts);
+//    vector<Point2f> pts_w(pts.size());
+//    Mat m_pts_w(pts_w);
+//    perspectiveTransform(Mat(pts), m_pts_w, H);
+//    points2keypoints(pts_w, out);
+//}
+//void matches2points(const vector<KeyPoint>& train, const vector<KeyPoint>& query,
+//                    const std::vector<cv::DMatch>& matches, std::vector<cv::Point2f>& pts_train,
+//                    std::vector<Point2f>& pts_query)
+//{
+//    
+//    pts_train.clear();
+//    pts_query.clear();
+//    pts_train.reserve(matches.size());
+//    pts_query.reserve(matches.size());
+//    
+//    size_t i = 0;
+//    
+//    for (; i < matches.size(); i++)
+//    {
+//        
+//        const DMatch & dmatch = matches[i];
+//        
+//        pts_query.push_back(query[dmatch.queryIdx].pt);
+//        pts_train.push_back(train[dmatch.trainIdx].pt);
+//        
+//    }
+//    
+//}
 
 
 int main (int argc, const char * argv[])
@@ -126,12 +126,7 @@ int main (int argc, const char * argv[])
     imgGrayB = cvCreateImage(cvSize(Img_width, Img_height), IPL_DEPTH_8U, 1); 
     
     
-    //imgA = cvLoadImage("/P1_1.jpg", 3);
-    //imgB = cvLoadImage("/P1_2.jpg", 3);
-    //int grabFrameRet;
-    
-    cout<<"second image"<<endl; 
-
+       
     vector<Point2f> tempCorners;
     do 
         if ((cameraFrame = cvQueryFrame(camCapture))) 
@@ -147,7 +142,7 @@ int main (int argc, const char * argv[])
                 imgB=cvCloneImage(frame);           
             }
             if(_1stframe== false)
-           {
+             {
                 imgA= frame;               // new frame //
                 imgC= cvCloneImage(imgB);  // previous frame //
                                 
@@ -155,7 +150,7 @@ int main (int argc, const char * argv[])
                 cvCvtColor(imgC,imgGrayB, CV_BGR2GRAY);  
                    
                 cv::Mat flow_mat;
-                vector<Point2f> corners, nextPts;
+                vector<Point2f> corners, nextPts, trackedPts;
                 vector<uchar> status;
                 vector<float> err;
                 vector<Point2f> conersNew;
@@ -163,51 +158,55 @@ int main (int argc, const char * argv[])
                 //std::vector<unsigned char> FAST_match_mask;
         
                if(_1sttrack==true)
-               {
-                   goodFeaturesToTrack(imgGrayB, corners, 100, 0.001,10);
-                   cornerSubPix(imgGrayB, corners, Size(11,11), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
+                {
+                   goodFeaturesToTrack(imgGrayB, corners, 300, 0.01 ,11);
+                   cornerSubPix(imgGrayB, corners, Size(13,13), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
                    calcOpticalFlowPyrLK(imgGrayB, imgGrayA, corners, nextPts, status, err, Size(45,45));
                    _1sttrack=false;
                    tempCorners=nextPts;
-               }
-               
-                            
+                }
+     
                if(_1sttrack==false)
                {
-                   //cout<<(int) tempCorners.size()<<endl;
+                                                         
+                   //cornerSubPix(imgGrayB, tempCorners, Size(13,13), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
+                   //calcOpticalFlowPyrLK(imgGrayB, imgGrayA, tempCorners, trackedPts, status, err, Size(45,45));
+                   goodFeaturesToTrack(imgGrayB, corners, 300, 0.01,11);
+                   cornerSubPix(imgGrayB, corners, Size(13,13), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
+                   calcOpticalFlowPyrLK(imgGrayB, imgGrayA, corners, nextPts, status, err, Size(45,45));
                    
-                  //goodFeaturesToTrack(imgGrayB, conersNew, 500, 0.001,10);
-                   cornerSubPix(imgGrayB, tempCorners, Size(11,11), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
-                  //nextPts = tempCorners;
+                   cout<< " skip this line"<<endl;
+                   cout<<endl;
+                   
+                   
+//                   for (int y=0;y<tempCorners.size();y++)
+//                   {
+//                     
+//                       float location_xB= (int) tempCorners[y].x;
+//                       float location_yB= (int) tempCorners[y].y;
+//                    
+//                       cout<<location_xB<<" "<<location_yB<<endl;
+//                        
+//                   }
+                   cout<< " second  "<<endl;
+                   cout<<endl;
                   
-                   calcOpticalFlowPyrLK(imgGrayB, imgGrayA, tempCorners, corners, status, err, Size(45,45));
-                   
-                   cout<<endl;
-                   cout<<endl;
-                   cout<<"first frame : "<<endl;
-                   
-                   for ( int y = 0; y < (int) tempCorners.size(); y++ ) 
+                   for (int y=0;y<corners.size();y++)
                    {
-                       int location_x= tempCorners[y].x;
-                       int location_y= tempCorners[y].y;
-                       cout<<location_x<<" "<<location_y<<" "<<endl;
+                       
+                       float location_x = (int) corners[y].x;
+                       float location_y = (int) corners[y].y;
+                       float location1_x=(int) nextPts[y].x;
+                       float location1_y=(int) nextPts[y].y;
+                       
+                       cout<<location_x<<" "<<location_y<<" "<<location1_x<<" "<<location1_y<<endl;
+                       
                    }
                    
-                   cout<<"next frame :"<<endl;
-                   cout<<endl;
-                   cout<<endl;
-                   
-                   
-                   for ( int y = 0; y < (int) corners.size(); y++ ) 
-                   {
-                       int location_x= corners[y].x;
-                       int location_y= corners[y].y;
-                       cout<<location_x<<" "<<location_y<<" "<<endl;
-                   }
-                   
-                   
+                   // add update corners //
                    tempCorners.clear();
-                   tempCorners=corners;
+                   tempCorners=nextPts;
+                   
                    
                   //cout<<(int) corners.size()<<endl;
                }
