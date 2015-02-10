@@ -33,6 +33,44 @@ IplImage* skipNFrames(CvCapture* capture, int n);
 using namespace cv;
 using namespace std;
 
+void RefindMatchdPts(vector<Point2f>& corners , vector<Point2f>& NestPts, int ImgWidth ,int ImgHeight)
+{
+    int Size_= (int) corners.size();
+    
+    cout<<"before "<<Size_<<endl;
+    
+    vector<Point2f> Tempcorner;
+    vector<Point2f> TempNestPts;    
+    
+    for (int i =0; i<Size_;i++)
+    {
+        if (corners[i].x >0 && NestPts[i].x > 0)
+        {
+            if (corners[i].x < ImgWidth && NestPts[i].x< ImgWidth)
+            {
+                if (corners[i].y> 0 && NestPts[i].y >0)
+                {
+                    if (corners[i].y< ImgHeight && NestPts[i].y< ImgHeight)
+                    {
+                        
+                        Tempcorner.push_back(corners[i]);
+                        TempNestPts.push_back(NestPts[i]);
+                    }
+                }
+            }
+            
+        }
+    }
+    
+    corners.clear();
+    NestPts.clear();
+     
+    corners = Tempcorner;
+    NestPts = TempNestPts;
+    
+    cout<<"after "<<(int)corners.size()<<endl;
+
+}
 void ConnectedVideoSequence(vector<Point2f> tempCorners,vector<Point2f> NestPts, vector<Point>& tempPts)
 {
     
@@ -49,9 +87,9 @@ void ConnectedVideoSequence(vector<Point2f> tempCorners,vector<Point2f> NestPts,
     
     for (int i=0; i< ReferencePtsize; i++)
     {
-        if (referencePts[i].x >0 && referencePts[i].y > 0)
+        //if (referencePts[i].x >0 && referencePts[i].y > 0)
             
-        {
+        //{
             if (referencePts[i].x !=-99999 && referencePts[i].y !=-99999  )
             {
                 int x =  referencePts[i].x;
@@ -61,8 +99,8 @@ void ConnectedVideoSequence(vector<Point2f> tempCorners,vector<Point2f> NestPts,
                 {
                     if  (matchedPts[j],x > 0 && matchedPts[j].y > 0)
                     {
-                        if ( matchedPts[j].x !=-99999 && matchedPts[j].y !=-99999 )
-                        {
+                        //if ( matchedPts[j].x !=-99999 && matchedPts[j].y !=-99999 )
+                        //{
                             int x_m =  matchedPts[j].x;
                             int y_m =  matchedPts[j].y;
                             
@@ -87,8 +125,8 @@ void ConnectedVideoSequence(vector<Point2f> tempCorners,vector<Point2f> NestPts,
                     }
                 }
             }
-        }
-    }
+     //   }
+    //}
 }
 
 
@@ -136,7 +174,7 @@ int main (int argc, const char * argv[])
     do 
         if ((cameraFrame = cvQueryFrame(camCapture))) 
         {
-            frame = skipNFrames(camCapture,8);
+            frame = skipNFrames(camCapture,5);
             frame = cvQueryFrame(camCapture);
             
             Img_width= frame->width;
@@ -146,8 +184,9 @@ int main (int argc, const char * argv[])
             {
                 imgB=cvCloneImage(frame);           
             }
+            
             if(_1stframe== false)
-             {
+            {
                 imgA= frame;               // new frame //
                 imgC= cvCloneImage(imgB);  // previous frame //
                                 
@@ -165,66 +204,65 @@ int main (int argc, const char * argv[])
                if(_1sttrack==true)
                 {
                    goodFeaturesToTrack(imgGrayB, corners, 300, 0.01 ,11);
-                   cornerSubPix(imgGrayB, corners, Size(13,13), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
+                   cornerSubPix(imgGrayB, corners, Size(15,15), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
                    calcOpticalFlowPyrLK(imgGrayB, imgGrayA, corners, nextPts, status, err, Size(45,45));
                    _1sttrack=false;
                    tempCorners=nextPts;
                 }
-     
-               if(_1sttrack==false)
+                
+                if(_1sttrack==false)
                 {
-                   vector<Point>  tempPts;     //add temp points i->previous frame  j->current frame                                
-                  
-                   //cornerSubPix(imgGrayB, tempCorners, Size(13,13), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
-                   //calcOpticalFlowPyrLK(imgGrayB, imgGrayA, tempCorners, trackedPts, status, err, Size(45,45));
-                   
-                   goodFeaturesToTrack(imgGrayB, corners, 300, 0.01,11);
-                   cornerSubPix(imgGrayB, corners, Size(13,13), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
-                   calcOpticalFlowPyrLK(imgGrayB, imgGrayA, corners, nextPts, status, err, Size(45,45));
+                    vector<Point>  tempPts;     //add temp points i->previous frame  j->current frame                                
                     
-                   cout<< " skip this line"<<endl;
-                   cout<<endl;
-
-                   ConnectedVideoSequence(tempCorners, corners, tempPts);
+                    //cornerSubPix(imgGrayB, tempCorners, Size(13,13), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
+                    //calcOpticalFlowPyrLK(imgGrayB, imgGrayA, tempCorners, trackedPts, status, err, Size(45,45));
                     
-                   bool *tempPlotPts =new bool[(int) nextPts.size()];
-                   int NumOverlapPts = (int)  tempPts.size();    
-                 
-                   cout<< "connect_pts "<< tempPts.size()<<endl;
-
+                    goodFeaturesToTrack(imgGrayB, corners, 300, 0.01,11);
+                    cornerSubPix(imgGrayB, corners, Size(15,15), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
+                    calcOpticalFlowPyrLK(imgGrayB, imgGrayA, corners, nextPts, status, err, Size(45,45));
+                    
+                    RefindMatchdPts(corners , nextPts, Img_width, Img_height);
+                    
+                    cout<< " skip this line"<<endl;
+                    cout<<endl;
+                    
+                    ConnectedVideoSequence(tempCorners, corners, tempPts);
+                    
+                    bool *tempPlotPts  = new bool [(int) nextPts.size()];
+                    int  NumOverlapPts = (int)    tempPts.size();    
+                    
+                    cout<< "connect_pts "<< tempPts.size()<<endl;
+                    
                     for (int i=0;i<NumOverlapPts;i++)
                     {
                         int idx = tempPts[i].y;  
                         tempPlotPts[idx]=1;
                     }
                     
-                                        
                     
-                    
-                  for (int y=0;y<corners.size();y++)
-                   {
-                       
-                    //float location_x  = (int)  corners[y].x;
-                    //float location_y  = (int)  corners[y].y;		
-                    
-                    float location1_x = (int)  nextPts[y].x;
-                    float location1_y = (int)  nextPts[y].y;
-                    if (tempPlotPts[y]==0)
+                    for (int y=0;y<corners.size();y++)
+                    {
+                        
+                        //float location_x  = (int)  corners[y].x;
+                        //float location_y  = (int)  corners[y].y;		
+                        
+                        float location1_x = (int)  nextPts[y].x;
+                        float location1_y = (int)  nextPts[y].y;
+                        
+                        if  (tempPlotPts[y]==0)
                             cvCircle(imgA, cvPoint(location1_y, location1_x), 1, CV_RGB(0, 255, 0), -1); 
-                    if(tempPlotPts[y]==1)
+                        if  (tempPlotPts[y]==1)
                             cvCircle(imgA, cvPoint(location1_y, location1_x), 1, CV_RGB(255,0, 0), -1); 
-                       
-                   }
-                   
-                   
-                   // add update corners //
-                   tempCorners.clear();
-                   tempCorners=nextPts;
-                   tempPts.clear();
-                   
-                  delete [] tempPlotPts;
-                  //cout<<(int) corners.size()<<endl;
-               }
+                        
+                    }
+                    // add update corners //
+                    tempCorners.clear();
+                    tempCorners=nextPts;
+                    tempPts.clear();
+                    
+                    delete [] tempPlotPts;
+                    //cout<<(int) corners.size()<<endl;
+                }
                
                  cout<< " second  "<<endl;
                  cout<<endl;
