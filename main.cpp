@@ -27,9 +27,6 @@ int Img_width = 640;
 int Img_height= 480;
 IplImage* skipNFrames(CvCapture* capture, int n);
 
-
-
-
 using namespace cv;
 using namespace std;
 
@@ -37,7 +34,7 @@ void RefindMatchdPts(vector<Point2f>& corners , vector<Point2f>& NestPts, int Im
 {
     int Size_= (int) corners.size();
     
-    cout<<"before "<<Size_<<endl;
+    //cout<<"before "<<Size_<<endl;
     
     vector<Point2f> Tempcorner;
     vector<Point2f> TempNestPts;    
@@ -68,7 +65,7 @@ void RefindMatchdPts(vector<Point2f>& corners , vector<Point2f>& NestPts, int Im
     corners = Tempcorner;
     NestPts = TempNestPts;
     
-    cout<<"after "<<(int)corners.size()<<endl;
+    //cout<<"after "<<(int)corners.size()<<endl;
 
 }
 void ConnectedVideoSequence(vector<Point2f> tempCorners,vector<Point2f> NestPts, vector<Point>& tempPts)
@@ -79,7 +76,6 @@ void ConnectedVideoSequence(vector<Point2f> tempCorners,vector<Point2f> NestPts,
        
     vector<Point2f> referencePts;
     vector<Point2f> matchedPts;
-    //vector<Point>   tempPts;
     
     referencePts = tempCorners;
     matchedPts   = NestPts;
@@ -87,9 +83,6 @@ void ConnectedVideoSequence(vector<Point2f> tempCorners,vector<Point2f> NestPts,
     
     for (int i=0; i< ReferencePtsize; i++)
     {
-        //if (referencePts[i].x >0 && referencePts[i].y > 0)
-            
-        //{
             if (referencePts[i].x !=-99999 && referencePts[i].y !=-99999  )
             {
                 int x =  referencePts[i].x;
@@ -97,10 +90,8 @@ void ConnectedVideoSequence(vector<Point2f> tempCorners,vector<Point2f> NestPts,
                 
                 for (int j=0; j<MatchedPtsize; j++)
                 {
-                    if  (matchedPts[j],x > 0 && matchedPts[j].y > 0)
+                    if  (matchedPts[j].x > 0 && matchedPts[j].y > 0)
                     {
-                        //if ( matchedPts[j].x !=-99999 && matchedPts[j].y !=-99999 )
-                        //{
                             int x_m =  matchedPts[j].x;
                             int y_m =  matchedPts[j].y;
                             
@@ -124,10 +115,8 @@ void ConnectedVideoSequence(vector<Point2f> tempCorners,vector<Point2f> NestPts,
                         } 
                     }
                 }
-            }
-     //   }
-    //}
-}
+          }
+  }
 
 
 int main (int argc, const char * argv[])
@@ -139,7 +128,6 @@ int main (int argc, const char * argv[])
         cout << "Failed to capture from camera" << endl;
         // goto exitCameraOpenFailed;
     }
-    
     
     cvSetCaptureProperty(camCapture, CV_CAP_PROP_FRAME_WIDTH,  320); 
     cvSetCaptureProperty(camCapture, CV_CAP_PROP_FRAME_HEIGHT, 240); 
@@ -168,13 +156,12 @@ int main (int argc, const char * argv[])
     imgGrayA = cvCreateImage(cvSize(Img_width, Img_height), IPL_DEPTH_8U, 1);
     imgGrayB = cvCreateImage(cvSize(Img_width, Img_height), IPL_DEPTH_8U, 1); 
     
-    
        
     vector<Point2f> tempCorners;
     do 
         if ((cameraFrame = cvQueryFrame(camCapture))) 
         {
-            frame = skipNFrames(camCapture,5);
+            frame = skipNFrames(camCapture,8);
             frame = cvQueryFrame(camCapture);
             
             Img_width= frame->width;
@@ -204,7 +191,7 @@ int main (int argc, const char * argv[])
                if(_1sttrack==true)
                 {
                    goodFeaturesToTrack(imgGrayB, corners, 300, 0.01 ,11);
-                   cornerSubPix(imgGrayB, corners, Size(15,15), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
+                   cornerSubPix(imgGrayB, corners, Size(13,13), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
                    calcOpticalFlowPyrLK(imgGrayB, imgGrayA, corners, nextPts, status, err, Size(45,45));
                    _1sttrack=false;
                    tempCorners=nextPts;
@@ -214,11 +201,8 @@ int main (int argc, const char * argv[])
                 {
                     vector<Point>  tempPts;     //add temp points i->previous frame  j->current frame                                
                     
-                    //cornerSubPix(imgGrayB, tempCorners, Size(13,13), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
-                    //calcOpticalFlowPyrLK(imgGrayB, imgGrayA, tempCorners, trackedPts, status, err, Size(45,45));
-                    
                     goodFeaturesToTrack(imgGrayB, corners, 300, 0.01,11);
-                    cornerSubPix(imgGrayB, corners, Size(15,15), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
+                    cornerSubPix(imgGrayB, corners, Size(13,13), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
                     calcOpticalFlowPyrLK(imgGrayB, imgGrayA, corners, nextPts, status, err, Size(45,45));
                     
                     RefindMatchdPts(corners , nextPts, Img_width, Img_height);
@@ -233,6 +217,7 @@ int main (int argc, const char * argv[])
                     
                     cout<< "connect_pts "<< tempPts.size()<<endl;
                     
+                    // separate the points //
                     for (int i=0;i<NumOverlapPts;i++)
                     {
                         int idx = tempPts[i].y;  
@@ -243,18 +228,18 @@ int main (int argc, const char * argv[])
                     for (int y=0;y<corners.size();y++)
                     {
                         
-                        //float location_x  = (int)  corners[y].x;
-                        //float location_y  = (int)  corners[y].y;		
-                        
                         float location1_x = (int)  nextPts[y].x;
                         float location1_y = (int)  nextPts[y].y;
                         
                         if  (tempPlotPts[y]==0)
                             cvCircle(imgA, cvPoint(location1_y, location1_x), 1, CV_RGB(0, 255, 0), -1); 
-                        if  (tempPlotPts[y]==1)
+                        if  (tempPlotPts[y]==1)  // overlapped Points 
                             cvCircle(imgA, cvPoint(location1_y, location1_x), 1, CV_RGB(255,0, 0), -1); 
                         
+                        //cvLine(imgA, corners[y], nextPts[y], CV_RGB(0, 255, 0) ,1, 8, 0 );
+                        
                     }
+                    
                     // add update corners //
                     tempCorners.clear();
                     tempCorners=nextPts;
@@ -263,89 +248,12 @@ int main (int argc, const char * argv[])
                     delete [] tempPlotPts;
                     //cout<<(int) corners.size()<<endl;
                 }
-               
-                 cout<< " second  "<<endl;
-                 cout<<endl;
-        
-                              
-               imgB= cvCloneImage(frame);
-               /*
-                 for ( int y = 0; y < (int) corners.size(); y++ ) 
-                   {
-                       int location_x= corners[y].x;
-                       int location_y= corners[y].y;
-                       float location_xB= nextPts[y].x;
-                       float location_yB= nextPts[y].y;
-                       CvScalar s;
-                       //cout<<location_x<<" "<<location_y<<" "<<location_xB<<" "<<location_yB<<" "<<endl;
-                       
-                        if(location_x <320-1 && location_y < 240-1)
-                         {
-                         
-                                                    
-                          if(location_x>0 && location_y >0)
-                           {
-                              //s.val[0]=0;
-                              //s.val[1]=0;
-                              //s.val[2]=0;                           
-                         
-                           //else
-                           //{
-                           //s = cvGet2D(imgA, location_x, location_y);
-                             s = cvGet2D(imgA,location_y, location_x);
-                             cvCircle(imgA, cvPoint(location_y, location_x), 1, CV_RGB(0, 255, 0), -1);
-                             //cout<<location_x<<" "<<location_y<<" "<<location_xB<<" "<<location_yB<<" "<<s.val[0]<<" "<<s.val[1]<<" "<<s.val[2]<<" "<<endl;
-                              cout<<location_x<<" "<<location_y<<" "<<endl;
-                           }
-                       }
-                       
-                       //cvCircle(imgA, cvPoint(location_y, location_x), 1, CV_RGB(0, 255, 0), -1);
-                       //cvCircle(imgB, cvPoint(location_xB, location_yB), 1, CV_RGB(0, 255, 0), -1);
-               
-                       // cout<<location_x<<" "<<location_y<<" "<<location_xB<<" "<<location_yB<<" "<<s.val[0]<<" "<<s.val[1]<<" "<<s.val[2]<<" "<<endl;
-                   }
-                 */ 
-                  // _1stframe = false ;
-//                 calcOpticalFlowFarneback( imgGrayA, imgGrayB, flow_mat, 0.1, 3, 15, 3, 5, 1.5,  cv::OPTFLOW_FARNEBACK_GAUSSIAN);                        
-               
-                //vector<CvPoint2D32f> left_points, right_points;
-//                
-//                for ( int y = 0; y < imgGrayA->height; y+=14 ) 
-//                {
-//                    for ( int x = 0; x < imgGrayA->width; x+=14 ) 
-//                    {
-//                        /* Flow is basically the delta between left and right points */
-//                         const cv::Point2f& fxy = flow_mat.at<cv::Point2f>(y, x);
-//                         /*  There's no need to calculate for every single point,
-//                          if there's not much change, just ignore it
-//                        */
-//                        if ((x+fxy.x)>0 && (y+fxy.y)>0)
-//                        {
-//                          if ((sqrt((fxy.x*fxy.x)+(fxy.y*fxy.y))>20) && (sqrt((fxy.x*fxy.x)+(fxy.y*fxy.y)))<160)
-//                         //if( fabs(fxy.x) > 4 || fabs(fxy.y) > 4 )
-//                          {
-//                         //continue;
-//                         cvCircle(imgB, cvPoint(x+fxy.x, y+fxy.y), 1, CV_RGB(0, 255, 0), -1);
-//                         //cvCircle(imgA, cvPoin t(x, y), 1, CV_RGB(0, 255, 0), -1);
-//                         //CvScalar s= cvGet2D(imgA, y, x);
-//                         //cout<<x<<" "<<y<<" "<< x+fxy.x<<" "<<y +fxy.y<<" "<<" "<<s.val[2]<<" "<<s.val[1]<<" "<<s.val[0]<<endl;
-//                          }
-//                        }
-//                      
-//                        //left_points.push_back(  cvPoint2D32f ( x, y ) );
-//                        //right_points.push_back( cvPoint2D32f( x + fxy.x, y + fxy.y ) );
-//                    }
-//                }
-//                
-//                
-//               cout<<"second image"<<endl; 
-//               flow_mat.release();
-//                
-//                // printf("[%d] - Sheta:%lf, Length:%lf\n",i , fVecSetha, fVecLength);     
-//                
+                
+                cout<< " second  "<<endl;
+                cout<<endl;
+                imgB= cvCloneImage(frame);
                 cvShowImage("frame1",imgA);
-//                //cout<<"test 1"<<endl;
-//                    cvShowImage("frame2",imgC);
+                
             }        
             _1stframe=false;    
       }
