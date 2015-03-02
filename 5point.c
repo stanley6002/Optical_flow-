@@ -637,9 +637,7 @@ int compute_pose_ransac(int n, v2_t *r_pts, v2_t *l_pts,
     
     matrix_invert(3, K1, K1_inv);
     matrix_invert(3, K2, K2_inv);
-    
-    
-    
+   
     for (i = 0; i < n; i++) {
         double r[3] = { Vx(r_pts[i]), Vy(r_pts[i]), 1.0 };
         double l[3] = { Vx(l_pts[i]), Vy(l_pts[i]), 1.0 };
@@ -733,7 +731,7 @@ int compute_pose_ransac(int n, v2_t *r_pts, v2_t *l_pts,
                 }
             }
             
-            // printf("first: %d, second: %d\n", first_hyp, second_hyp);
+            //printf("first: %d, second: %d\n", first_hyp, second_hyp);
         }
     }
     

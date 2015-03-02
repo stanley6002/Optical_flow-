@@ -538,7 +538,7 @@ int find_extrinsics_essential_multipt(double *E, int n,
     
     /* Now find R and t */
     tu[0] = U[2];  tu[1] = U[5];  tu[2] = U[8];
-    matrix_print(3,1,tu);
+    //matrix_print(3,1,tu);
     matrix_product33(U, D, tmp);
     matrix_product33(tmp, VT, Ra);
     matrix_product33(U, DT, tmp);

@@ -755,7 +755,7 @@ float  Apical_Angle( v2_t* l_pt, v2_t* r_pt, double *R,  double *t, double *K , 
      double camera2t[3];
      double t_scale[3]; 
      
-     # define Bin_Number 15   
+     # define Bin_Number 200
     
       //printf("Rotation R from 5pts : \n");
       //matrix_print(3, 3, R);
@@ -767,7 +767,7 @@ float  Apical_Angle( v2_t* l_pt, v2_t* r_pt, double *R,  double *t, double *K , 
      matrix_transpose_product(3, 3, 3, 1, R, t, camera2t);
     
      matrix_scale(3, 1, camera2t, -1.0, t_scale);
-     
+    
      // matrix_print(3,3,R);
      // matrix_print(3,1,t);
      // printf(" t_distance %f\n", sqrt((t[0]*t[0])+(t[1]*t[1])+(t[2]*t[2])));
@@ -778,7 +778,7 @@ float  Apical_Angle( v2_t* l_pt, v2_t* r_pt, double *R,  double *t, double *K , 
 
     double Tao_val;
     
-    for (i = 0; i < size_; i++)
+    for (i = 0; i < size_ ; i++)
     {
         double x_temp[3];
         double r[3] = { Vx(r_pt[i]), Vy(r_pt[i]), 1.0 };
@@ -844,14 +844,15 @@ float  Apical_Angle( v2_t* l_pt, v2_t* r_pt, double *R,  double *t, double *K , 
 float KDE_estimation(double * Tao, const int size_, const int Nbins)
 {
 
-  double max_number = -9999;
-  double min_number =  9999;
+  //double max_number = -9999;
+  double max_number =  0.4;    // remove outliers from candidated points 
+  double min_number =  0.0;
   double range;
   int i;
   //int * Bin;
   //Bin =(int *) malloc(Nbins* sizeof(int));
   //memset( Bin, 0, sizeof(Bin));
-  int Bin[15]={};
+  int Bin[200]={};
   //int index   = 0; 
   int mx_bin  = 0;
   int mx_index= 0;
@@ -860,19 +861,20 @@ float KDE_estimation(double * Tao, const int size_, const int Nbins)
   //double  Apical_Angle;
   //bool *Index_vector;
     
+    int numofmin=0;  
   
-    for (i=0;i< size_;i++)
-    {
+   // for (i=0;i< size_;i++)
+   // {
 
-        if (Tao[i]<min_number)
-        {
-         min_number= Tao[i];
-        }
-       if (Tao[i]> max_number)
-        {
-         max_number= Tao[i];
-        }
-    }
+   //     if (Tao[i]<min_number)
+   //     {
+   //      min_number= Tao[i];
+   //     }
+       //if (Tao[i]> max_number)
+       // {
+       //  max_number= Tao[i];
+       // }
+    //}
 
 
  
@@ -882,7 +884,7 @@ float KDE_estimation(double * Tao, const int size_, const int Nbins)
     {
         for(i=0; i<size_;i++)
         {
-            Range_low= min_number + (index)*range;
+            Range_low = min_number + (index)*range;
             Range_upper = min_number + (index+1)*range;
                if ( Range_low <Tao[i] && Tao[i]<= Range_upper)              
                {
@@ -904,10 +906,17 @@ float KDE_estimation(double * Tao, const int size_, const int Nbins)
 
     }
     
+    //for(i=0; i<size_;i++)
+    //{
+    //  if ((Tao[i] >= min_number) && (Tao[i] > min_number+0.05 ))
+    //      numofmin++;
+    //}
+    
     //printf("index %i \n", mx_index);
     //printf("mx_bin %i \n", mx_bin);
-    float Apical_angle = (((min_number + (mx_index+1)*range)+(min_number + (mx_index)*range)))/2;
-     
+    // printf("mx_index range min max numofmax %d %f %f %f %d\n",mx_index, range, min_number, max_number, numofmin);
+    // float Apical_angle = (((min_number + (mx_index+1)*range)+(min_number + (mx_index)*range)))*0.5;
+    float Apical_angle = (min_number+(mx_index)*range);
      //    printf("value %f \n ", Apical_angle);
      //    for(i=0;i<Nbins;i++)
      //    {
