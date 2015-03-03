@@ -265,15 +265,56 @@ int main (int argc, const char * argv[])
                      matrix_scale(3, 1, camera2t, -1.0, t_out);
                      //matrix_print(3,1,t_out);
                      
-                     cout<<Angle<<" ";
+                     
+                     
+                     cout<<Angle<<" "<<endl;
                      delete [] nextPtsv2;
                      delete [] cornersv2;
+                     
+                     if (Angle>0.05)
+                     {
+                     // initialized first one camera relative-pose //
+                     double camera_1R[9];
+                     double camera_1t[3];
+                     
+                     double camera_2R[9];
+                     double camera_2t[3];
+                     
+                     memcpy(camera_2R, R_out, sizeof(double)*9);
+                     memcpy(camera_2t, t_out, sizeof(double)*3);        
+
+                     camera_1R[0] = 1.0;  camera_1R[1] = 0.0;  camera_1R[2] = 0.0;
+                     camera_1R[3] = 0.0;  camera_1R[4] = 1.0;  camera_1R[5] = 0.0;
+                     camera_1R[6] = 0.0;  camera_1R[7] = 0.0;  camera_1R[8] = 1.0;        
+                     camera_1t[0] = 0.0;  camera_1t[1] = 0.0;  camera_1t[2] = 0.0; 
+
+                     double error_tr=0;
+                         
+                     for (int i=0; i<NumbeofPts ;i++)
+                     {
+                         bool in_front = true;
+                         double angle = 0.0;
+                         v3_t temp; 
+                         v2_t p;
+                         v2_t q;
+                         p.p[0] = cornersv2[i].p[0];
+                         p.p[1] = cornersv2[i].p[1];
+                         q.p[0] = nextPtsv2[i].p[0];
+                         q.p[1] = nextPtsv2[i].p[1];
+                         
+                         temp = Triangulate(p, q, camera_1R, camera_1t,camera_2R,camera_2t, error_tr, in_front, angle,true,K1,K2);      
+                         printf(" %0.6f %0.6f %0.6f\n", temp.p[0], temp.p[1],temp.p[2]);
+                      }
+                       
+                         break;
+                     }
+                     
 #ifdef PlotFeatureTracking                  
                      // separate the points  for plat result//
                      //  tempoarary array to save the location of overlapped points
                      bool *tempPlotPts  = new bool [(int) nextPts.size()];
                      int  NumOverlapPts = (int)    tempPts.size();                        
-                     cout<< "connect_pts "<< tempPts.size()<<endl;
+                     //cout<< "connect_pts "<< tempPts.size()<<endl;
                     
                     for (int i=0;i<NumOverlapPts;i++)
                     {
@@ -307,8 +348,8 @@ int main (int argc, const char * argv[])
                 
                 
                 
-//                cout<< " second  "<<endl;
-//                cout<<endl;
+//              cout<< " second  "<<endl;
+//              cout<<endl;
                 imgB= cvCloneImage(frame);
                 cvShowImage("frame1",imgA);
                 
