@@ -45,13 +45,13 @@ void RefindMatchedPts(vector<Point2f>& corners , vector<Point2f>& NestPts, int I
     
     for (int i =0; i<Size_;i++)
     {
-        if (corners[i].x >0 && NestPts[i].x > 0)
+        if (corners[i].x >5 && NestPts[i].x > 5)
         {
-            if (corners[i].x < ImgWidth && NestPts[i].x< ImgWidth)
+            if (corners[i].x < ImgWidth-5 && NestPts[i].x< ImgWidth-5 )
              {
-                if (corners[i].y> 0 && NestPts[i].y >0)
+                if (corners[i].y> 5 && NestPts[i].y >5)
                 {
-                    if (corners[i].y< ImgHeight && NestPts[i].y< ImgHeight)
+                    if (corners[i].y< ImgHeight-5 && NestPts[i].y< ImgHeight-5)
                     {
                         
                         Tempcorner.push_back(corners[i]);
@@ -167,10 +167,12 @@ int main (int argc, const char * argv[])
     
        
     vector<Point2f> tempCorners;
+    int SkipThisFrame=0;
+    
     do 
         if ((cameraFrame = cvQueryFrame(camCapture))) 
         {
-            frame = skipNFrames(camCapture,8);
+            frame = skipNFrames(camCapture,3);
             frame = cvQueryFrame(camCapture);
             
             Img_width= frame->width;
@@ -183,8 +185,10 @@ int main (int argc, const char * argv[])
             
             if(_1stframe== false)
             {
-                  imgA= frame;               // new frame //
-                  imgC= cvCloneImage(imgB);  // previous frame //
+                  imgA= frame;  // new frame //
+                
+                  if(SkipThisFrame ==0) 
+                     imgC= cvCloneImage(imgB);  // previous frame //
                                 
                   cvCvtColor(imgA,imgGrayA, CV_BGR2GRAY);  
                   cvCvtColor(imgC,imgGrayB, CV_BGR2GRAY);  
@@ -199,9 +203,9 @@ int main (int argc, const char * argv[])
          
                if(_1sttrack==true)
                  {
-                   goodFeaturesToTrack(imgGrayB, corners, 350, 0.001, 10);
-                   cornerSubPix(imgGrayB, corners, Size(9,9), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
-                   calcOpticalFlowPyrLK(imgGrayB, imgGrayA, corners, nextPts, status, err, Size(45,45));
+                   goodFeaturesToTrack(imgGrayB, corners, 400, 0.001, 5);
+                   cornerSubPix(imgGrayB, corners, Size(5,5), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
+                   calcOpticalFlowPyrLK(imgGrayB, imgGrayA, corners, nextPts, status, err, Size(40,40));
                    _1sttrack=false;
                    tempCorners=nextPts;
                  }
@@ -209,9 +213,9 @@ int main (int argc, const char * argv[])
                 if(_1sttrack==false)
                  {
                     vector<Point>  tempPts;     // add temp points i->previous frame  j->current frame                                
-                    goodFeaturesToTrack(imgGrayB, corners, 350, 0.001, 10);
-                    cornerSubPix(imgGrayB, corners, Size(9,9), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
-                                        calcOpticalFlowPyrLK(imgGrayB, imgGrayA, corners, nextPts, status, err, Size(45,45));
+                    goodFeaturesToTrack(imgGrayB, corners, 400, 0.001, 5);
+                    cornerSubPix(imgGrayB, corners, Size(5,5), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 ));
+                                        calcOpticalFlowPyrLK(imgGrayB, imgGrayA, corners, nextPts, status, err, Size(40,40));
                     RefindMatchedPts(corners , nextPts, Img_width, Img_height);
                     
                     //cout<< " skip this line"<<en-dl;
@@ -265,13 +269,21 @@ int main (int argc, const char * argv[])
                      matrix_scale(3, 1, camera2t, -1.0, t_out);
                      //matrix_print(3,1,t_out);
                      
+                     //cout<<Angle<<" "<<endl;
+                     //SkipThisFrame=0;
                      
-                     
-                     cout<<Angle<<" "<<endl;
+                     if (Angle < 0.07)
+                         SkipThisFrame=1;   
+                     else 
+                         SkipThisFrame=0; 
+                         
+                         
+                         
                      delete [] nextPtsv2;
                      delete [] cornersv2;
                      
-                     if (Angle>0.05)
+                     
+                     if (Angle>0.07)
                      {
                      // initialized first one camera relative-pose //
                      double camera_1R[9];
@@ -308,6 +320,7 @@ int main (int argc, const char * argv[])
                        
                          break;
                      }
+                    
                      
 #ifdef PlotFeatureTracking                  
                      // separate the points  for plat result//
@@ -332,7 +345,7 @@ int main (int argc, const char * argv[])
                         if  (tempPlotPts[y]==0)     // Plot new Points
                             cvCircle(imgA, cvPoint(location1_x, location1_y),3, CV_RGB(0, 255, 0), -1); 
                         if  (tempPlotPts[y]==1)     // overlapped Points 
-                            cvCircle(imgA, cvPoint(location1_x, location1_y),3, CV_RGB(255,0, 0), -1); 
+                            cvCircle(imgA, cvPoint(location1_x, location1_y),3, CV_RGB(255,0, 0),  -1); 
                     }
 #endif                    
                     // add update corners //
@@ -350,7 +363,16 @@ int main (int argc, const char * argv[])
                 
 //              cout<< " second  "<<endl;
 //              cout<<endl;
-                imgB= cvCloneImage(frame);
+                if (SkipThisFrame !=1)
+                   {
+                     imgB= cvCloneImage(frame);
+                       cout<<"save this freame "<<endl;
+                  }
+                else
+                  {
+                    cout<<"skip this frame "<<endl;
+                }
+                
                 cvShowImage("frame1",imgA);
                 
             }        
