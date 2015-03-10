@@ -1,4 +1,10 @@
-
+//
+//  main.cpp
+//  Optical_flow 
+//
+//  Created by chih-hsiang chang on 7/1/14.
+//  Copyright 2014 __MyCompanyName__. All rights reserved.
+//
 
 #include "F_matrix.h"
 #include <iostream>
@@ -28,7 +34,8 @@ void F_matrix_process (int num_pts, v3_t* r_pt, v3_t* l_pt,double *F, int num_tr
         double distance = fmatrix_compute_residual(F,r_pt[i],l_pt[i]);
         if (distance<100)
         { 
-            //cout<<distance1<<endl;
+        
+        //cout<<distance1<<endl;
         inliers.push_back(i);
         //cout<< l_pt[i].p[1]<<" "<<r_pt[i].p[1]<<" "<<distance<<" "<<distance1<<endl;
         //cout<< l_pt[i].p[0]<<" "<<l_pt[i].p[1]<<" "<<r_pt[i].p[0]<<" "<<r_pt[i].p[1]<<endl;
