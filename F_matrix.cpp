@@ -20,7 +20,7 @@ void F_matrix_process (int num_pts, v3_t* r_pt, v3_t* l_pt,double *F, int num_tr
    //      double success_ratio,
    //      int essential, double *F)
     //double success_ratio;
-    F_estimated= estimate_fmatrix_ransac_matches(num_pts, r_pt, l_pt, 1000, 2.0, 2.0,essential, F); 
+    F_estimated= estimate_fmatrix_ransac_matches(num_pts, r_pt, l_pt, 100, 2.0, 2.0,essential, F); 
     //matrix_print(3, 3, F);
     double  e1_tmp[3], e2_tmp[3];
    // F_estimated= estimate_fmatrix_linear(num_pts,r_pt,l_pt, 
@@ -32,7 +32,7 @@ void F_matrix_process (int num_pts, v3_t* r_pt, v3_t* l_pt,double *F, int num_tr
     for (int i=0; i<num_pts;i++)
     {
         double distance = fmatrix_compute_residual(F,r_pt[i],l_pt[i]);
-        if (distance<100)
+        if (distance<50)
         { 
         
         //cout<<distance1<<endl;
@@ -97,7 +97,7 @@ void F_matrix_process (int num_pts, v3_t* r_pt, v3_t* l_pt,double *F, int num_tr
         double distance = fmatrix_compute_residual(F,r_pt[i],l_pt[i]);
         // double distance= fmatrix_compute_distance(F,  r_pt[i],  l_pt[i]); 
       
-        if (distance<100)
+        if (distance<50)
         {
             non_inliers.push_back(i);
             // cout<< l_pt[i].p[0]<<" "<<l_pt[i].p[1]<<" "<<r_pt[i].p[0]<<" "<<r_pt[i].p[1]<<endl;

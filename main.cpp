@@ -7,23 +7,15 @@
 //
 
 #include <iostream>
-
-#include "opencv/cv.h"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/video/tracking.hpp"
-#include <cv.hpp>
-#include <cxmisc.h>
-#include <cxcore.h>
-#include <cvaux.h>
 #include "F_matrix.h"
+#include "videoprocessing.h"
+#include "matchingandtracking.h"
+#include "FFME.h"
 
 CvCapture *camCapture;
 #define IMAGE_WIDTH  320
 #define IMAGE_HEIGHT 240
-IplImage*  frame ;
+
 int Img_width = 320;
 int Img_height= 240;
 
@@ -179,10 +171,11 @@ int main (int argc, const char * argv[])
     cout << "Camera opened successfully" << endl;
     
     IplImage *cameraFrame;    
-    bool _1stframe=true;
-    bool _1sttrack=true;
     
-    cameraFrame = cvCreateImage(cvSize (IMAGE_WIDTH,IMAGE_HEIGHT), IPL_DEPTH_8U,3);
+    bool _1stframe=true;
+    //bool _1sttrack=true;
+    
+    cameraFrame = cvCreateImage(cvSize (Img_width,Img_height), IPL_DEPTH_8U,3);
     
     IplImage * imgA=0;        
     IplImage * imgB=0;     
@@ -201,79 +194,354 @@ int main (int argc, const char * argv[])
     imgGrayA = cvCreateImage(cvSize(Img_width, Img_height), IPL_DEPTH_8U, 1);
     imgGrayB = cvCreateImage(cvSize(Img_width, Img_height), IPL_DEPTH_8U, 1); 
     
-    IplImage* Two_image = 0;
+    //IplImage* Two_image = 0;
     
     vector<Point2f> tempCorners;
-    int SkipThisFrame=0;
-    int firstcapture =1;
+    //int SkipThisFrame=0;
+    //int firstcapture =1;
     
+    IplImage*  frame ;
+    VideoProcessing VideoProcessing (Img_width, Img_height);
+    int firstcapture =1;
     do 
         if ((cameraFrame = cvQueryFrame(camCapture))) 
-        {
-            if(firstcapture ==1 )
-               {
-                 frame = skipNFrames(camCapture,3);
-                 firstcapture=0;
+         {
+                    
+            if ( _1stframe)
+            {
+                frame = cvQueryFrame(camCapture);
+                frame = skipNFrames(camCapture, 10);
+                imgB  = cvCloneImage(frame);           
             }
             
-            //for (int i=0;i<5;i++)
-              frame = cvQueryFrame(camCapture);
-            //frame = skipNFrames(camCapture,1);
-
-            Img_width= frame->width;
-            Img_height= frame->height;
-            
-            if (_1stframe== true)
+            if( ! _1stframe)
             {
-                imgB=cvCloneImage(frame);           
-            }
-            
-            if(_1stframe== false)
-            {
-                  imgA= frame;  // new frame //
-                
-                  if(SkipThisFrame ==0) 
-                     imgC= cvCloneImage(imgB);  // previous frame //
-                                
-                  cvCvtColor(imgA,imgGrayA, CV_BGR2GRAY);  
-                  cvCvtColor(imgC,imgGrayB, CV_BGR2GRAY);  
-                   
-                  //cv::Mat flow_mat;
-                  vector<Point2f> corners, nextPts, trackedPts;
-                  vector<uchar> status;
-                  vector<float> err;
-                  vector<Point2f> conersNew;
+                 
+                bool CaptureFrames=0; 
                
-                  //std::vector<unsigned char> FAST_match_mask;
-         
-               if(_1sttrack==true)
-                 {
-                   goodFeaturesToTrack(imgGrayB, corners, 400, 0.001, 8);
-                   cornerSubPix(imgGrayB, corners, Size(7,7), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 20, 0.03 ));
-                   calcOpticalFlowPyrLK(imgGrayB, imgGrayA, corners, nextPts, status, err, Size(50,50));
-                   _1sttrack=false;
-                   tempCorners=nextPts;
-                 }
-                
-                if(_1sttrack==false)
-                 {
-                    vector<Point>  tempPts;     // add temp points i->previous frame  j->current frame                                
-                    
-                     std::vector<uchar> features_found; 
-                     std::vector<float> feature_errors;
-                     
-                    goodFeaturesToTrack(imgGrayB, corners, 400, 0.001, 8);
-                    cornerSubPix(imgGrayB, corners, Size(7,7), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 20, 0.03 ));
-                    calcOpticalFlowPyrLK(imgGrayB, imgGrayA, corners, nextPts, status, err, Size(50,50));
+                //if(firstcapture==1)
+                //{
                   
-                    RefindMatchedPts(corners , nextPts, Img_width, Img_height);
-                     
-                    //cout<< " skip this line"<<en-dl;
-                    
-                   ConnectedVideoSequence(tempCorners, corners, tempPts);
+                //    frame = skipNFrames(camCapture, 2);
+                  
+                //}
+                
+                //else
+                //{
+                frame = skipNFrames(camCapture, 2);  
+                //}
+                frame = VideoProcessing.CaptureInitialFrame(camCapture);
+              
+                if (! CaptureFrames)
+                {                                          
                    
-                    int NumbeofPts = (int) corners.size();
+                    if (VideoProcessing.captureNextFrame)
+                    {
+                        CaptureFrames =1;
+                    }
+                }
+
+                if(CaptureFrames==1)
+                {              
                     
+                    imgA= frame;  // new frame //
+                    imgC= cvCloneImage(imgB);  // previous frame //
+                    
+                    cvCvtColor(imgA,imgGrayA, CV_BGR2GRAY);  
+                    cvCvtColor(imgC,imgGrayB, CV_BGR2GRAY);
+                  
+                      //OrbFeatureDetector
+                    
+                    
+//                    int noMaxPoints=1000;
+//                    CvPoint2D32f* singPoints1;
+//                    CvPoint2D32f* singPoints2;
+//                    
+//                    int noSingPoints1;
+//                    int noSingPoints2;
+//                    int noCorr;
+//                    singPoints1 = (CvPoint2D32f*)cvAlloc(noMaxPoints * sizeof(CvPoint2D32f));
+//                    singPoints2 = (CvPoint2D32f*)cvAlloc(noMaxPoints * sizeof(CvPoint2D32f));
+//                
+//                    float** descriptors1;
+//                    float** descriptors2;
+//                    CvPoint2D32f** correspondences;
+//                    
+//                    FFME ffme;
+//                    ffme.iniFFME(Img_width, Img_height, imgA->origin, 1000);
+//                    
+//                    descriptors1 = (float**)cvAlloc(noMaxPoints * sizeof(float*));
+//                    descriptors2 = (float**)cvAlloc(noMaxPoints * sizeof(float*));
+//                    
+//                    int lengthDesc = ffme.m_widthArrayHist*ffme.m_widthArrayHist*ffme.m_noBinsOriHist;
+//                    
+//                    for(int i=0;i<noMaxPoints;i++)
+//                    {
+//                        descriptors1[i] = (float*)cvAlloc(lengthDesc * sizeof(float));
+//                    }
+//                    for(int i=0;i<noMaxPoints;i++)
+//                    {
+//                        descriptors2[i] = (float*)cvAlloc(lengthDesc * sizeof(float));
+//                    }
+//                     correspondences = (CvPoint2D32f**)cvAlloc(noMaxPoints * sizeof(CvPoint2D32f*));
+//                    for(int i=0;i<noMaxPoints;i++)
+//                    {
+//                        correspondences[i] = (CvPoint2D32f*)cvAlloc(2 * sizeof(CvPoint2D32f));
+//                    }
+//
+//                    
+//                    ffme.singPtoDetLut(imgGrayA, singPoints1, &noSingPoints1);
+//                    ffme.singPtoDetLut(imgGrayB, singPoints2, &noSingPoints2);
+//                    ffme.m_radMaxSearch =32;
+//                    ffme.matchSingPtos(singPoints2, noSingPoints2, descriptors2, singPoints1, noSingPoints1, descriptors1, correspondences, &noCorr);
+//                    
+//                    cout<<noCorr<<endl;
+//                    CvPoint *pt_new_query_t = new CvPoint [noCorr];
+//                    CvPoint *pt_new_train_t= new CvPoint  [noCorr];
+//                    
+//                    
+//                    for (int i=0; i< noCorr;i++)
+//                    {
+//                        pt_new_query_t[i].x = correspondences[i][0].x;
+//                        pt_new_query_t[i].y = correspondences[i][0].y ;
+//                       
+//                        pt_new_train_t[i].x = correspondences[i][1].x;
+//                        pt_new_train_t[i].y = correspondences[i][1].y ;
+//
+//                    
+//                    }
+//                    
+//                    IplImage* Two_image_1= plot_two_imagesf(imgC,imgA, pt_new_query_t, pt_new_train_t,noCorr);
+//                    cvShowImage("test", Two_image_1);
+//            
+//                    int size_match = noCorr;
+//                    v3_t * r_pt = new v3_t [size_match];
+//                    v3_t * l_pt = new v3_t [size_match];
+//                      for(int i=0 ; i< size_match;i++) 
+//                              {
+//                                            //pt_new_query[i].x = match_query[i].x;
+//                                            //pt_new_query[i].y = match_query[i].y;
+//                                            
+//                                            //pt_new_train[i].x = match_train[i].x;
+//                                            //pt_new_train[i].y = match_train[i].y;
+//                                            
+//                                            r_pt[i].p[0]=pt_new_query_t[i].x;
+//                                            r_pt[i].p[1]=pt_new_query_t[i].y;
+//                                            r_pt[i].p[2]=1.0;
+//                                            
+//                                            l_pt[i].p[0]=pt_new_train_t[i].x;
+//                                            l_pt[i].p[1]=pt_new_train_t[i].y;
+//                                            l_pt[i].p[2]=1.0;
+//                    
+//                                            
+//                                        }
+
+                    
+                    
+                    LKFeatures LKFeatures (imgGrayB,imgGrayA);
+                    
+                    std::vector<CvPoint2D32f> match_query; 
+                    std::vector<CvPoint2D32f> match_train;
+                    
+                    LKFeatures.FeaturesMatched (match_query, match_train);
+                    
+                    int size_match= (int) match_query.size();
+                    CvPoint *pt_new_query = new CvPoint [size_match];
+                    CvPoint *pt_new_train= new CvPoint [size_match];
+                    
+                    for(int i=0 ; i<size_match;i++)
+                    {
+                        pt_new_query[i].x = match_query[i].x;
+                        pt_new_query[i].y = match_query[i].y;
+                        
+                        pt_new_train[i].x = match_train[i].x;
+                        pt_new_train[i].y = match_train[i].y;
+                    }
+
+                    
+                    v3_t * r_pt = new v3_t [size_match];
+                    v3_t * l_pt = new v3_t [size_match];
+                    for(int i=0 ; i< size_match;i++) 
+                    {
+                        pt_new_query[i].x = match_query[i].x;
+                        pt_new_query[i].y = match_query[i].y;
+                        
+                        pt_new_train[i].x = match_train[i].x;
+                        pt_new_train[i].y = match_train[i].y;
+                        
+                        r_pt[i].p[0]=match_query[i].x;
+                        r_pt[i].p[1]=match_query[i].y;
+                        r_pt[i].p[2]=1.0;
+                        
+                        l_pt[i].p[0]=match_train[i].x;
+                        l_pt[i].p[1]=match_train[i].y;
+                        l_pt[i].p[2]=1.0;
+
+                        
+                    }
+                    //size_match=100;
+                    IplImage* Two_image= plot_two_imagesf(imgA,imgC, pt_new_query, pt_new_train,size_match );
+                    cvShowImage("test", Two_image);
+
+                    double F[9];
+                    int essential=0;
+                    int num_trial=200;
+                    matched * refined_pts= new matched[1];     
+                    
+                    F_matrix_process (size_match,  r_pt, l_pt, F, num_trial, 10 ,  essential, refined_pts, 0);
+                    
+                    int num_ofrefined_pts= (int)refined_pts[0].R_pts.size();
+                    
+                    //cout ith element's data length   
+                    //F_key_matrix *F_matrix=new F_key_matrix[2];                                               /// number of F_matrix
+                    //pushback_Fmatrix(F,F_matrix,0);                                                          // 0 is ith pairs
+                    /// edit to stadard form
+                    
+                
+                    v2_t *lrefined_pt= new v2_t[num_ofrefined_pts];
+                    v2_t *rrefined_pt= new v2_t[num_ofrefined_pts];
+
+                    pop_backpts_WI(lrefined_pt,rrefined_pt,refined_pts,0);
+                    
+                    for (int i=0;i<num_ofrefined_pts;i++)
+                    {
+                        v2_t p;
+                        v2_t q;
+                        p.p[0] = lrefined_pt[i].p[0]-160;
+                        p.p[1] = lrefined_pt[i].p[1]-120;
+                        q.p[0] = rrefined_pt[i].p[0]-160;
+                        q.p[1] = rrefined_pt[i].p[1]-120;
+                        
+                        lrefined_pt[i].p[0]=p.p[0];
+                        lrefined_pt[i].p[1]=p.p[1];
+                        rrefined_pt[i].p[0]=q.p[0];
+                        rrefined_pt[i].p[1]=q.p[1];
+                        //cout<< lrefined_pt[i].p[0]<<" "<< lrefined_pt[i].p[1]<<" "<< rrefined_pt[i].p[0]<<" "<<rrefined_pt[i].p[1]<<endl;
+                    }
+
+                    
+                    int NumberofPts = num_ofrefined_pts; 
+                    double R_out[9];
+                    double t_out[3];
+                    double camera2t[3];
+                    
+                    //double K1[9],K2[9];
+                    
+                    int Ransac_rounds = 300; 
+                    double Ransac_threshold= 2 ;
+                    
+                    v2_t *cornersv2   = new v2_t [NumberofPts];
+                    v2_t *nextPtsv2   = new v2_t [NumberofPts];
+                    
+                    double K1[9]= {
+                        320.0, 0.0,  0.0, 
+                        0.000000e+00, 320.0, 0.0, 
+                        0.000000e+00,  0.000000e+00,  1.000000e+00} ;
+                    
+                    double K2[9]= {
+                        320.0, 0.0,  0.0, 
+                        0.000000e+00, 320.0, 0.0, 
+                        0.000000e+00,  0.000000e+00,  1.000000e+00} ; 
+                    
+//                    for (int i=0;i<NumberofPts;i++)
+//                    {
+//                        v2_t p;
+//                        v2_t q;
+//                        p.p[0] = match_query[i].x-160;
+//                        p.p[1] = match_query[i].y-120;
+//                        q.p[0] = match_train[i].x-160;
+//                        q.p[1] = match_train[i].y-120;
+//                        
+//                        cornersv2[i].p[0] =p.p[0];
+//                        cornersv2[i].p[1] =p.p[1];
+//                        nextPtsv2[i].p[0] =q.p[0];
+//                        nextPtsv2[i].p[1] =q.p[1];
+//                        //cout<< lrefined_pt[i].p[0]<<" "<< lrefined_pt[i].p[1]<<" "<< rrefined_pt[i].p[0]<<" "<<rrefined_pt[i].p[1]<<endl;
+//                    }
+
+                    compute_pose_ransac(NumberofPts, lrefined_pt, rrefined_pt, K1, K2, Ransac_threshold, Ransac_rounds , R_out ,t_out);
+                  
+                    matrix_transpose_product(3, 3, 3, 1, R_out, t_out , camera2t);
+                    matrix_scale(3, 1, camera2t, -1.0, t_out);
+                    matrix_print(3,1,t_out);
+                    cout<<endl;
+                     float Angle =  Apical_Angle(cornersv2, nextPtsv2, R_out , t_out , K1, NumberofPts); 
+                    cout<<Angle<<endl;
+                    double camera_1R[9];
+                    double camera_1t[3];
+                                 
+                    double camera_2R[9];
+                    double camera_2t[3];
+                                         
+                    memcpy(camera_2R, R_out, sizeof(double)*9);
+                    memcpy(camera_2t, t_out, sizeof(double)*3);        
+                    
+                    camera_1R[0] = 1.0;  camera_1R[1] = 0.0;  camera_1R[2] = 0.0;
+                    camera_1R[3] = 0.0;  camera_1R[4] = 1.0;  camera_1R[5] = 0.0;
+                    camera_1R[6] = 0.0;  camera_1R[7] = 0.0;  camera_1R[8] = 1.0;        
+                    camera_1t[0] = 0.0;  camera_1t[1] = 0.0;  camera_1t[2] = 0.0; 
+                    
+                     double error_tr=0;
+                         
+                     for (int i=0; i<NumberofPts ;i++)
+                     {
+                         bool in_front = true;
+                         double angle = 0.0;
+                         v3_t temp; 
+                         v2_t p;
+                         v2_t q;
+                         p.p[0] = lrefined_pt[i].p[0];
+                         p.p[1] = lrefined_pt[i].p[1];
+                         q.p[0] = rrefined_pt[i].p[0];
+                         q.p[1] = rrefined_pt[i].p[1]; 
+                         temp = Triangulate(p, q, camera_1R, camera_1t,camera_2R,camera_2t, error_tr, in_front, angle,true,K1,K2);  
+                         printf("%0.4f %0.4f %0.4f\n", temp.p[0], temp.p[1],temp.p[2]);
+                         //                         printf("%0.4f %0.4f %0.4f %0.4f %0.4f %0.4f %0.4f\n", temp.p[0], temp.p[1],temp.p[2] ,p.p[0]+160, p.p[1]+120,q.p[0]+160,q.p[1]+120);
+                                               }
+
+                    break;
+                   //if(SkipThisFrame ==0) 
+                   //imgC= cvCloneImage(imgB);  // previous frame //
+                                
+                   //cvCvtColor(imgA,imgGrayA, CV_BGR2GRAY);  
+                   //cvCvtColor(imgC,imgGrayB, CV_BGR2GRAY);  
+                   
+                   //cv::Mat flow_mat;
+                   //vector<Point2f> corners, nextPts, trackedPts;
+                   //vector<uchar> status;
+                   //vector<float> err;
+                   //vector<Point2f> conersNew;
+               
+                 //std::vector<unsigned char> FAST_match_mask;
+         
+                 //if(_1sttrack==true)
+                 // {
+                 //  goodFeaturesToTrack(imgGrayB, corners, 400, 0.001, 8);
+                 //  cornerSubPix(imgGrayB, corners, Size(7,7), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 20, 0.03 ));
+                 //  calcOpticalFlowPyrLK(imgGrayB, imgGrayA, corners, nextPts, status, err, Size(50,50));
+                 //  _1sttrack=false;
+                 //  tempCorners=nextPts;
+                 // }
+                
+                 //if(_1sttrack==false)
+                 //{
+                 //   vector<Point>  tempPts;     // add temp points i->previous frame  j->current frame                                
+                    
+                 //    std::vector<uchar> features_found; 
+                 //    std::vector<float> feature_errors;
+                     
+                 //  goodFeaturesToTrack(imgGrayB, corners, 400, 0.001, 8);
+                 //  cornerSubPix(imgGrayB, corners, Size(7,7), Size(-1,-1), TermCriteria(  CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 20, 0.03 ));
+                 //   calcOpticalFlowPyrLK(imgGrayB, imgGrayA, corners, nextPts, status, err, Size(50,50));
+                  
+                 //   RefindMatchedPts(corners , nextPts, Img_width, Img_height);
+                     
+                 //  cout<< " skip this line"<<endl;
+                    
+                 //  ConnectedVideoSequence(tempCorners, corners, tempPts);
+                   
+                 //  int NumbeofPts = (int) corners.size();
+                 /* 
                     double R_out[9];
                     double t_out[3];
                     double camera2t[3];
@@ -332,117 +600,117 @@ int main (int argc, const char * argv[])
                      delete [] cornersv2;
                      
                      v3_t *_3DPts = new v3_t [NumbeofPts];
+                     */
                     
-                    
-                     if (Angle>0.06)
-                     {
-                     // initialized first one camera relative-pose //
-                     double camera_1R[9];
-                     double camera_1t[3];
-                     
-                     double camera_2R[9];
-                     double camera_2t[3];
-                     
-                     memcpy(camera_2R, R_out, sizeof(double)*9);
-                     memcpy(camera_2t, t_out, sizeof(double)*3);        
-
-                     camera_1R[0] = 1.0;  camera_1R[1] = 0.0;  camera_1R[2] = 0.0;
-                     camera_1R[3] = 0.0;  camera_1R[4] = 1.0;  camera_1R[5] = 0.0;
-                     camera_1R[6] = 0.0;  camera_1R[7] = 0.0;  camera_1R[8] = 1.0;        
-                     camera_1t[0] = 0.0;  camera_1t[1] = 0.0;  camera_1t[2] = 0.0; 
-
-                     double error_tr=0;
-                         
-                     for (int i=0; i<NumbeofPts ;i++)
-                     {
-                         bool in_front = true;
-                         double angle = 0.0;
-                         v3_t temp; 
-                         v2_t p;
-                         v2_t q;
-                         p.p[0] = cornersv2[i].p[0];
-                         p.p[1] = cornersv2[i].p[1];
-                         q.p[0] = nextPtsv2[i].p[0];
-                         q.p[1] = nextPtsv2[i].p[1];
-                         
-                         temp = Triangulate(p, q, camera_1R, camera_1t,camera_2R,camera_2t, error_tr, in_front, angle,true,K1,K2);     
-                         _3DPts[i]= temp;
-                         //printf("%0.4f %0.4f %0.4f\n", temp.p[0], temp.p[1],temp.p[2]);
-                         printf("%0.4f %0.4f %0.4f %0.4f %0.4f %0.4f %0.4f\n", temp.p[0], temp.p[1],temp.p[2] ,p.p[0]+160, p.p[1]+120,q.p[0]+160,q.p[1]+120);
-                      }
-                       vector<v2_t> nextPtsvRefined;
-                       vector<v2_t> cornersvRefined;
-                       vector<v3_t> _3DPtsRefined;
-                         
-                         _3DPtsRefinement ( nextPtsv2, cornersv2,  _3DPts,NumbeofPts,  nextPtsvRefined ,  cornersvRefined,  _3DPtsRefined );
-                         
-                         int ptsize = (int) _3DPtsRefined.size();
-                         
-                         for (int i=0; i<ptsize ;i++)
-                         {
-                             bool in_front = true;
-                             double angle = 0.0;
-                             v3_t temp; 
-                             v2_t p;
-                             v2_t q;
-                             p.p[0] = cornersvRefined[i].p[0];
-                             p.p[1] = cornersvRefined[i].p[1];
-                             q.p[0] = nextPtsvRefined[i].p[0];
-                             q.p[1] = nextPtsvRefined[i].p[1];
-                             
-                             temp = Triangulate(p, q, camera_1R, camera_1t,camera_2R,camera_2t, error_tr, in_front, angle,true,K1,K2);     
-                             //_3DPts[i]= temp;
-                              
-                              printf(" %0.4f %0.4f %0.4f\n", temp.p[0], temp.p[1],temp.p[2]);
-                              //printf(" %0.6f %0.6f %0.6f\n", _3DPtsRefined[i].p[0], _3DPtsRefined[i].p[1],_3DPtsRefined[i].p[2]);
-                         }
-                    
-                        
-                         
-                         break;
-                     }
+//                     if (Angle>0.06)
+//                     {
+//                     // initialized first one camera relative-pose //
+//                     double camera_1R[9];
+//                     double camera_1t[3];
+//                     
+//                     double camera_2R[9];
+//                     double camera_2t[3];
+//                     
+//                     memcpy(camera_2R, R_out, sizeof(double)*9);
+//                     memcpy(camera_2t, t_out, sizeof(double)*3);        
+//
+//                     camera_1R[0] = 1.0;  camera_1R[1] = 0.0;  camera_1R[2] = 0.0;
+//                     camera_1R[3] = 0.0;  camera_1R[4] = 1.0;  camera_1R[5] = 0.0;
+//                     camera_1R[6] = 0.0;  camera_1R[7] = 0.0;  camera_1R[8] = 1.0;        
+//                     camera_1t[0] = 0.0;  camera_1t[1] = 0.0;  camera_1t[2] = 0.0; 
+//
+//                     double error_tr=0;
+//                         
+//                     for (int i=0; i<NumbeofPts ;i++)
+//                     {
+//                         bool in_front = true;
+//                         double angle = 0.0;
+//                         v3_t temp; 
+//                         v2_t p;
+//                         v2_t q;
+//                         p.p[0] = cornersv2[i].p[0];
+//                         p.p[1] = cornersv2[i].p[1];
+//                         q.p[0] = nextPtsv2[i].p[0];
+//                         q.p[1] = nextPtsv2[i].p[1];
+//                         
+//                         temp = Triangulate(p, q, camera_1R, camera_1t,camera_2R,camera_2t, error_tr, in_front, angle,true,K1,K2);     
+//                         _3DPts[i]= temp;
+//                         //printf("%0.4f %0.4f %0.4f\n", temp.p[0], temp.p[1],temp.p[2]);
+//                         printf("%0.4f %0.4f %0.4f %0.4f %0.4f %0.4f %0.4f\n", temp.p[0], temp.p[1],temp.p[2] ,p.p[0]+160, p.p[1]+120,q.p[0]+160,q.p[1]+120);
+//                      }
+//                       vector<v2_t> nextPtsvRefined;
+//                       vector<v2_t> cornersvRefined;
+//                       vector<v3_t> _3DPtsRefined;
+//                         
+//                         _3DPtsRefinement ( nextPtsv2, cornersv2,  _3DPts,NumbeofPts,  nextPtsvRefined ,  cornersvRefined,  _3DPtsRefined );
+//                         
+//                         int ptsize = (int) _3DPtsRefined.size();
+//                         
+//                         for (int i=0; i<ptsize ;i++)
+//                         {
+//                             bool in_front = true;
+//                             double angle = 0.0;
+//                             v3_t temp; 
+//                             v2_t p;
+//                             v2_t q;
+//                             p.p[0] = cornersvRefined[i].p[0];
+//                             p.p[1] = cornersvRefined[i].p[1];
+//                             q.p[0] = nextPtsvRefined[i].p[0];
+//                             q.p[1] = nextPtsvRefined[i].p[1];
+//                             
+//                             temp = Triangulate(p, q, camera_1R, camera_1t,camera_2R,camera_2t, error_tr, in_front, angle,true,K1,K2);     
+//                             //_3DPts[i]= temp;
+//                              
+//                              printf(" %0.4f %0.4f %0.4f\n", temp.p[0], temp.p[1],temp.p[2]);
+//                              //printf(" %0.6f %0.6f %0.6f\n", _3DPtsRefined[i].p[0], _3DPtsRefined[i].p[1],_3DPtsRefined[i].p[2]);
+//                         }
+//                    
+//                        
+//                         
+//                         break;
+//                     }
                     
                      
 #ifdef PlotFeatureTracking                  
                      // separate the points  for plat result//
                      //  tempoarary array to save the location of overlapped points
-                     bool *tempPlotPts  = new bool [(int) nextPts.size()];
-                     int  NumOverlapPts = (int)    tempPts.size();                        
-                     //cout<< "connect_pts "<< tempPts.size()<<endl;
+//                   bool *tempPlotPts  = new bool [(int) nextPts.size()];
+//                   int  NumOverlapPts = (int)    tempPts.size();                        
+                   
                     
-                    for (int i=0;i<NumOverlapPts;i++)
-                    {
-                        int idx = tempPts[i].y;  
+//                    for (int i=0;i<NumOverlapPts;i++)
+//                    {
+//                        int idx = tempPts[i].y;  
                         // mark overlapped points to one 
-                        tempPlotPts[idx]=1;
-                    }
+//                        tempPlotPts[idx]=1;
+//                    }
                     
-                     CvPoint *pt_new_query = new CvPoint [NumbeofPts];
-                     CvPoint *pt_new_train= new CvPoint  [NumbeofPts];
+//                   CvPoint *pt_new_query = new CvPoint [NumbeofPts];
+//                   CvPoint *pt_new_train= new CvPoint  [NumbeofPts];
                      
                      
                      //NumbeofPts=NumbeofPts-100;
                      //int size_=80;
-                     for(int i=0 ; i<NumbeofPts;i++)
-                         //  for(; i< 1;i++)
-                     {
+//                     for(int i=0 ; i<NumbeofPts;i++)
+//                         //  for(; i< 1;i++)
+//                     {
                          
                          //CvPoint pt;
-                         pt_new_query[i].x = cornersv2[i].p[0]+160;
-                         pt_new_query[i].y = cornersv2[i].p[1]+120;
+//                         pt_new_query[i].x = cornersv2[i].p[0]+160;
+//                         pt_new_query[i].y = cornersv2[i].p[1]+120;
                          
-                         pt_new_train[i].x = nextPtsv2[i].p[0]+160;
-                         pt_new_train[i].y = nextPtsv2[i].p[1]+120;
+//                         pt_new_train[i].x = nextPtsv2[i].p[0]+160;
+//                         pt_new_train[i].y = nextPtsv2[i].p[1]+120;
                          
                          //pt.x= pt_new_train[i].x;
                          //pt.y= pt_new_train[i].y;
                          //cvCircle(img1, pt, 5, CV_RGB(0,255,0));
                          
-                     }
+//                     }
 
                      //int tempsize =0;
                      //Two_image= plot_two_imagesf(imgC,imgA, pt_new_query , pt_new_train , NumbeofPts);
-                     Two_image= plot_two_imagesf(imgC,imgA, pt_new_query , pt_new_train , NumbeofPts);
+//                     Two_image= plot_two_imagesf(imgC,imgA, pt_new_query , pt_new_train , NumbeofPts);
                    
                      /*
                     for (int y=0;y<corners.size();y++)
@@ -458,31 +726,29 @@ int main (int argc, const char * argv[])
                     }*/
 #endif                    
                     // add update corners //
-                    delete [] pt_new_query;
-                    delete [] pt_new_train;
+//                    delete [] pt_new_query;
+//                    delete [] pt_new_train;
                      
-                    tempCorners.clear();
-                    tempCorners=nextPts;
-                    tempPts.clear();
+//                      tempCorners.clear();
+//                    tempCorners=nextPts;
+//                    tempPts.clear();
                     
 #ifdef PlotFeatureTracking
-                    delete [] tempPlotPts;
-#endif                    
+//                    delete [] tempPlotPts;
+#endif              
+                    imgB= cvCloneImage(frame);
+
                 }
+                firstcapture=0;
                 
-                
-                if (SkipThisFrame !=1)
-                   {
-                     imgB= cvCloneImage(frame);
-                       cout<<"save this freame "<<endl;
-                  }
-                else
-                  {
-                    cout<<"skip this frame "<<endl;
-                }
-                
-                cvShowImage("frame1",Two_image);
-                
+                //if (SkipThisFrame !=1)
+                //   {
+                                      //      cout<<"save this freame "<<endl;
+                 // }
+                 //else
+                 // {
+                 //   cout<<"skip this frame "<<endl;
+                //}
             }        
             _1stframe=false;    
       }
