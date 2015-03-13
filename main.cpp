@@ -338,17 +338,35 @@ int main (int argc, const char * argv[])
 
                     
                     
-                    LKFeatures LKFeatures (imgGrayB,imgGrayA);
+//                    LKFeatures LKFeatures (imgGrayB,imgGrayA);
                     
-                    std::vector<CvPoint2D32f> match_query; 
-                    std::vector<CvPoint2D32f> match_train;
+//                    std::vector<CvPoint2D32f> match_query; 
+//                    std::vector<CvPoint2D32f> match_train;
                     
-                    LKFeatures.FeaturesMatched (match_query, match_train);
+//                    LKFeatures.FeaturesMatched (match_query, match_train);
+                  
+             
+
+                     FAST_ FAST_ (50, imgGrayA, imgGrayB , FAST_.SURF_descriptor);
+                     std::vector<CvPoint2D32f> match_query;
+                     std::vector<CvPoint2D32f> match_train;
+                     FAST_.FAST_tracking(match_query, match_train);
                     
                     int size_match= (int) match_query.size();
                     CvPoint *pt_new_query = new CvPoint [size_match];
                     CvPoint *pt_new_train= new CvPoint [size_match];
                     
+                    //for(int i=0 ; i< size_match;i++) 
+                    //{
+                    //    pt_new_query[i].x = match_query[i].x;
+                    //    pt_new_query[i].y = match_query[i].y;
+                        
+                    //    pt_new_train[i].x = match_train[i].x;
+                    //    pt_new_train[i].y = match_train[i].y;
+                        
+                    //}
+
+                                   
                     for(int i=0 ; i<size_match;i++)
                     {
                         pt_new_query[i].x = match_query[i].x;
@@ -356,11 +374,14 @@ int main (int argc, const char * argv[])
                         
                         pt_new_train[i].x = match_train[i].x;
                         pt_new_train[i].y = match_train[i].y;
+                        
+                        cout<<pt_new_query[i].x<<" "<<pt_new_query[i].y<<" "<<pt_new_train[i].x<<" "<<pt_new_train[i].y<<endl;
                     }
 
                     
                     v3_t * r_pt = new v3_t [size_match];
                     v3_t * l_pt = new v3_t [size_match];
+                    
                     for(int i=0 ; i< size_match;i++) 
                     {
                         pt_new_query[i].x = match_query[i].x;
@@ -407,6 +428,7 @@ int main (int argc, const char * argv[])
                     {
                         v2_t p;
                         v2_t q;
+                        
                         p.p[0] = lrefined_pt[i].p[0]-160;
                         p.p[1] = lrefined_pt[i].p[1]-120;
                         q.p[0] = rrefined_pt[i].p[0]-160;
