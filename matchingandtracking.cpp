@@ -73,7 +73,17 @@ void FAST_ :: FAST_tracking(std::vector<CvPoint2D32f>& match_query, std::vector<
          FAST_descriptor->compute(ImageGray2, FAST_train_kpts, FAST_train_desc);
          cv::BruteForceMatcher<cv::L2<float> > matcher;
          std::vector<cv::DMatch> FAST_matcher;
-         matcher.match(FAST_query_desc, FAST_train_desc, FAST_matcher);
+         
+            
+         std::vector<cv::KeyPoint> test_kpts;
+         
+         FAST_H_prev = cv::Mat::eye(3,3,CV_32FC1);
+         warpKeypoints(FAST_H_prev.inv(), FAST_query_kpts, test_kpts);
+         cv::Mat FAST_mask = windowedMatchingMask(test_kpts, FAST_train_kpts, 40, 40);
+         matcher.match(FAST_query_desc, FAST_train_desc, FAST_matcher, FAST_mask); 
+         
+         
+        
          
          //std::vector<std::vector<cv::DMatch> > matches;
              int i=0;

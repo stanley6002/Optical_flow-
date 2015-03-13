@@ -347,7 +347,7 @@ int main (int argc, const char * argv[])
                   
              
 
-                     FAST_ FAST_ (50, imgGrayA, imgGrayB , FAST_.SURF_descriptor);
+                     FAST_ FAST_ (30, imgGrayA, imgGrayB , FAST_.SURF_descriptor);
                      std::vector<CvPoint2D32f> match_query;
                      std::vector<CvPoint2D32f> match_train;
                      FAST_.FAST_tracking(match_query, match_train);
