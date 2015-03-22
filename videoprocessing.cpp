@@ -49,7 +49,7 @@ VideoProcessing:: VideoProcessing (int Width , int Height)
     
      Image1=  cvCreateImage(cv::Size(Width, Height), IPL_DEPTH_8U, 3);
      Image2=  cvCreateImage(cv::Size(Width, Height), IPL_DEPTH_8U, 3);
-    
+     //Image3=  cvCreateImage(cv::Size(Width, Height), IPL_DEPTH_8U, 3);
      //frame=  cvCreateImage(cv::Size(ImgWidth, ImgHeight), IPL_DEPTH_8U, 3);;
      
      captureNextFrame=FALSE;

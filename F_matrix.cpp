@@ -526,10 +526,369 @@ double align_horn(int n, v3_t *right_pts, v3_t *left_pts,
 }
 
 
+EpipolarGeometry::EpipolarGeometry(const std::vector<CvPoint2D32f> match_query , const std::vector<CvPoint2D32f> match_train,int num_pts, int trialFmatrix, int trialRelativepose , int focuslength, int Ransac_threshold)
+{
+
+    //initialize all of parameters for EpipolarGeometry  
+    EpipolarGeometry::num_trial_Fmatrix=trialFmatrix;
+    EpipolarGeometry::num_trial_relativepose=trialRelativepose;
+    EpipolarGeometry::essential= 0;
+    EpipolarGeometry::Numofpts= num_pts;
+    EpipolarGeometry::Ransac_threshold= Ransac_threshold;
+   
+    this->FocusLength= focuslength;
+    
+    r_pt = new v3_t[num_pts];
+    l_pt = new v3_t[num_pts];
+    
+    
+    for(int i=0 ; i< num_pts;i++) 
+    {
+        r_pt[i].p[0]=match_query[i].x;
+        r_pt[i].p[1]=match_query[i].y;
+        r_pt[i].p[2]=1.0;
+        
+        l_pt[i].p[0]=match_train[i].x;
+        l_pt[i].p[1]=match_train[i].y;
+        l_pt[i].p[2]=1.0;
+    }
+    
+  
+    //cout<< this->FocusLength<<endl;
+    
+    //MainProcess();
+    
+    
+}
+void EpipolarGeometry::MainProcess()
+{
+
+    FindFundamentalMatrix();
+    FindRelativePose();
+
+}
+void EpipolarGeometry::FindRelativePose()
+{
+    //int Ransac_rounds = 200; 
+    //double Ransac_threshold= 2 ;
+    
+    double R_out[9];
+    double t_out[3];
+    double camera2t[3];
+    
+    CenterizedFeaturePoint(lrefined_pt,rrefined_pt, num_ofrefined_pts);
+    
+    //double K1matrix[9];
+    //double K2matrix[9];
+    
+    InitializeIntrinsicMatrix(K1matrix);
+    InitializeIntrinsicMatrix(K2matrix); 
+    
+    //matrix_print(3,3,K1matrix);
+    //matrix_print(3,3,K2matrix);
+    
+    compute_pose_ransac(num_ofrefined_pts, lrefined_pt, rrefined_pt, K1matrix, K2matrix, Ransac_threshold, num_trial_relativepose , R_out ,t_out);
+    
+    matrix_transpose_product(3, 3, 3, 1, R_out, t_out , camera2t);
+    matrix_scale(3, 1, camera2t, -1.0, t_out);
+    matrix_print(3,1,t_out); 
+   
+    memcpy(R_relative, R_out, 9*sizeof(double));
+    memcpy(t_relative, t_out, 3*sizeof(double)); 
+    
+}
+void EpipolarGeometry::CenterizedFeaturePoint (v2_t* lrefined_pt, v2_t* rrefined_pt, int num_ofrefined_pts)
+{
+    for (int i=0;i<num_ofrefined_pts;i++)
+    {
+        v2_t p;
+        v2_t q;
+        
+        p.p[0]= CenterX(lrefined_pt[i].p[0]); 
+        p.p[1]= CenterY(lrefined_pt[i].p[1]);
+        q.p[0]= CenterX(rrefined_pt[i].p[0]); 
+        q.p[1]= CenterY(rrefined_pt[i].p[1]);
+        
+        
+        lrefined_pt[i].p[0]=p.p[0];
+        lrefined_pt[i].p[1]=p.p[1];
+        rrefined_pt[i].p[0]=q.p[0];
+        rrefined_pt[i].p[1]=q.p[1];
+    }
+    
 
 
+}
+void EpipolarGeometry::FindFundamentalMatrix()
+{
+
+    matched * refined_pts= new matched[1]; 
+    
+    double F[9];
+    
+    F_matrix_process (this->Numofpts,  r_pt, l_pt, F, this->num_trial_Fmatrix, 10 ,  this->essential, refined_pts, 0);
+    
+    num_ofrefined_pts= (int)refined_pts[0].R_pts.size();
+    
+    lrefined_pt= new v2_t[num_ofrefined_pts];
+    rrefined_pt= new v2_t[num_ofrefined_pts];
+    
+    pop_backpts_WI(lrefined_pt,rrefined_pt,refined_pts,0);
+     
+    delete [] refined_pts;
+}
+
+void EpipolarGeometry::InitializeIntrinsicMatrix(double* Kmatrix)
+{
+    Kmatrix[0]= this-> FocusLength ,  Kmatrix[1]=0.0                , Kmatrix[2]= 0.0;
+    Kmatrix[3]= 0.0                ,  Kmatrix[4]= this->FocusLength , Kmatrix[5]= 0.0;
+    Kmatrix[6]= 0.0 ,                 Kmatrix[7]= 0.0               , Kmatrix[8]= 1.0;
+
+}
+
+void EpipolarGeometry:: FindApicalAngle (float MaxAngle)
+{
+     
+    ApicalAngle =  Apical_Angle(lrefined_pt, rrefined_pt, R_relative , t_relative , K1matrix, num_ofrefined_pts); 
+     
+    if(ApicalAngle>= MaxAngle)
+        this->skipFrame=0;
+    else 
+        this->skipFrame=1;
+
+}
+
+EpipolarGeometry::~EpipolarGeometry()
+{
+    delete []  r_pt;
+    delete []  l_pt;
+    delete []  lrefined_pt;
+    delete []  rrefined_pt;
+    delete []  _3Dpts;
+    
+}
+
+void EpipolarGeometry::InitializeFirstPmatrix()
+{
+    
+    R1matrix[0] = 1.0;  R1matrix[1] = 0.0;  R1matrix[2] = 0.0;
+    R1matrix[3] = 0.0;  R1matrix[4] = 1.0;  R1matrix[5] = 0.0;
+    R1matrix[6] = 0.0;  R1matrix[7] = 0.0;  R1matrix[8] = 1.0; 
+
+    t1matrix[0] = 0.0;  t1matrix[1] = 0.0;  t1matrix[2] = 0.0;
+} 
+
+void EpipolarGeometry::TwoviewTriangulation()
+{
+   int size_= num_ofrefined_pts;
+   _3Dpts= new v3_t[size_];
+   
+    double error_tr=0.0;
+      for (int i=0; i< size_ ;i++)
+         {
+             bool in_front = true;
+             double angle = 0.0;
+             v3_t temp; 
+             v2_t p;
+             v2_t q;
+             p.p[0] = lrefined_pt[i].p[0];
+             p.p[1] = lrefined_pt[i].p[1];
+             q.p[0] = rrefined_pt[i].p[0];
+             q.p[1] = rrefined_pt[i].p[1]; 
+             temp = Triangulate(p, q, R1matrix , t1matrix ,R_relative, t_relative, error_tr, in_front, angle ,true,K1matrix,K2matrix);  
+             _3Dpts[i]= temp;
+             //printf("%0.4f %0.4f %0.4f\n", temp.p[0], temp.p[1],temp.p[2]);
+          }
+       
+}
+
+void EpipolarGeometry::PointRefinement()
+{
+    bool* tempvector = new bool [num_ofrefined_pts];
+    
+    for (int i=0;i<num_ofrefined_pts;i++)
+           tempvector[i]= false;
+    /// check Cheirality
+    for (int i=0;i<num_ofrefined_pts;i++)
+    {
+       if(CheckCheirality(_3Dpts[i]))
+       { 
+           tempvector[i]= true;
+       }
+    }
+    
+    _3DdepthRefine (_3Dpts, tempvector, num_ofrefined_pts);
+    
+    int Numindex=0;
+    
+    for (int i=0;i<num_ofrefined_pts;i++)
+    {
+        if(! tempvector[i])
+            Numindex++;
+     }
+   
+    v3_t* new3Dpts    = new v3_t[Numindex];
+    v2_t* newLeftptas = new v2_t [Numindex];
+    v2_t* newRightpts = new v2_t [Numindex];
+    
+    int index=0;
+    
+    for (int i=0;i<num_ofrefined_pts;i++)
+    {
+        if(! tempvector[i])
+        {
+            new3Dpts[index]= _3Dpts[i];
+            newLeftptas[index]= lrefined_pt[i];
+            newRightpts[index]= rrefined_pt[i];
+            index++;
+        }
+    }
+    
+    num_ofrefined_pts= index;
+    
+    for (int i=0; i< num_ofrefined_pts ;i++)
+        printf("%0.4f %0.4f %0.4f\n", new3Dpts[i].p[0],new3Dpts[i].p[1],new3Dpts[i].p[2]);
+     
+
+}
+ void EpipolarGeometry::_3DdepthRefine (v3_t* _3Dpts, bool* tempvector, int num_ofrefined_pts)
+{
+    
+    int size_= num_ofrefined_pts;
+    double max_number = -1.0;    // remove outliers from candidated points 
+    double min_number = -50.0;
+    double range;
+    int i;
+    int Nbins = 50;
+
+    int Bin[50]={};
+  
+    int mx_index= 0;
+    double  Range_low;
+    double  Range_upper;
+    
+    for (int i=0;i< size_;i++)
+    {
+             if ( _3Dpts[i].p[2]< min_number)
+                   tempvector[i]= true;                 
+    }
+    
+    range = (max_number - min_number) / Nbins;
+    for(i=0; i<size_;i++)
+    {
+       if (tempvector[i] == false)
+       {
+         for(int index=0; index< Nbins; index++)
+           {
+        
+            Range_low = min_number   +   (index)*range;
+            Range_upper = min_number +   (index+1)*range;
+            float x = (float) _3Dpts[i].p[2];
+            
+               if ( Range_low < x && x <= Range_upper)              
+                {
+                Bin[index] += 1; 
+                
+                }
+         }
+       }
+    }
+    int mx_bin  = 0;
+    for (int i=0;i<Nbins;i++)
+    {
+      if(Bin[i]> mx_bin)
+       {
+        mx_bin = Bin[i];
+        mx_index = i;
+        
+       }
+    }
+
+    float depth = (min_number+(mx_index)*range);
+    float varince= Variance (_3Dpts, depth, size_);
+    float *densitytemp  = new float [size_]; 
+    cout<< depth <<"variance "<<varince <<endl;
+    for (int i=0;i< size_;i++)
+    {
+         float x = (float) _3Dpts[i].p[2];
+         float a=-fabs(x-depth)*(1./(1.06*(sqrt(varince))*2.1));
+          //float density = exp(a);
+         densitytemp[i]=exp(a);
+        if (densitytemp[i]<0.2)
+            tempvector[i] = true;
+    }
+}
 
 
+float  EpipolarGeometry:: Variance (v3_t* _3Dpts, const float depth , const int size_)
+{   
+    float* tempz= new float [size_];
+    float sum=0.0;
+    int num=0;
+    for (int i=0;i<size_;i++)
+    { 
+        if(_3Dpts[i].p[2]< 0 && _3Dpts[i].p[2]> -30 )
+        {
+          tempz[i]= (_3Dpts[i].p[2]-depth)*(_3Dpts[i].p[2]-depth);
+          sum=sum+tempz[i];
+          num++;
+        }
+    }
+    
+    return( sum *= 1. / num );
 
 
+}
+IplImage* EpipolarGeometry:: plot_two_imagesf(IplImage *IGray, IplImage *IGray1)
+{
+    CvPoint newmatched;       
+    CvPoint matched;
+    int  ttw  =  IGray->width+ IGray->width;
+    int  ttl  =  IGray->height;
+    IplImage* Imagedisplay  = cvCreateImage(cvSize(2*IGray->width,IGray->height), IGray->depth, IGray->nChannels );
+    for (int i=0; i<ttl;i++)
+    {
+        for (int j=0; j<ttw; j++)
+        {
+            if (j< IGray->width)
+            {
+                cvSet2D(Imagedisplay,i,j,cvGet2D(IGray,i,j));
+            }
+            if (j>IGray->width)
+            {
+                cvSet2D(Imagedisplay,i,j,cvGet2D(IGray1,i,j-(IGray1->width)));
+            }
+        }
+    }
+    
+    CvPoint pt1,pt2;
+    pt1.x=0;
+    pt1.y=0;
+    pt2.x= (IGray->width)*2;
+    pt2.y= (IGray->height);
+    
+    if(skipFrame)
+        cvRectangle(Imagedisplay,pt1 , pt2, CV_RGB(256,0,0), 4, 8, 0 );
+    else 
+        cvRectangle(Imagedisplay,pt1 , pt2, CV_RGB(0,256,0), 4, 8, 0 );
+        for (int i=0;i<num_ofrefined_pts; i++)
+    {           
+        newmatched.x= (int)(lrefined_pt[i].p[0]+(IGray->width))+160;
+        newmatched.y= (int)(lrefined_pt[i].p[1])+120;
+        matched.x = (int) rrefined_pt[i].p[0]+160;
+        matched.y = (int) rrefined_pt[i].p[1]+120;
+        
+        cvLine(Imagedisplay, 
+        cvPoint( matched.x, matched.y ), 
+        cvPoint( newmatched.x, newmatched.y ), 
+        CV_RGB(256,256,256)
+        );
+    
 
+        cvCircle(Imagedisplay, newmatched, 3, CV_RGB(0,255,0),2,6,0);
+        cvCircle(Imagedisplay, matched, 3, CV_RGB(0,255,0), 2,6,0);
+        
+    }  
+    return(Imagedisplay);
+
+}

@@ -1,5 +1,6 @@
 
 #include "epipolar.h"
+
 #define  CLAMP(x,mn,mx) (((x) < mn) ? mn : (((x) > mx) ? mx : (x))
 
 
@@ -662,49 +663,51 @@ v3_t Triangulate(v2_t p, v2_t q, double *camera_1R,double *camera_1t,double *cam
     return pt;
 }
 
-//double ComputeRayAngle(v2_t p, v2_t q, double *K1_inv, double *K2_inv, double*camera_1R, double *camera_2R,double *camera_1t, double *camera_2t)
-//{
-//    
-//    double p3[3] = { Vx(p), Vy(p), 1.0 };
-//    double q3[3] = { Vx(q), Vy(q), 1.0 };
-//    
-//    double p3_norm[3], q3_norm[3];
-//    matrix_product331(K1_inv, p3, p3_norm);
-//    matrix_product331(K2_inv, q3, q3_norm);
-//    
-//    v2_t p_norm = v2_new(p3_norm[0] / p3_norm[2], p3_norm[1] / p3_norm[2]);
-//    v2_t q_norm = v2_new(q3_norm[0] / q3_norm[2], q3_norm[1] / q3_norm[2]);
-//    
-//    double R1_inv[9], R2_inv[9];
-//    matrix_transpose(3, 3, (double *) camera_1R, R1_inv);
-//    matrix_transpose(3, 3, (double *) camera_2R, R2_inv);
-//    
-//    double p_w[3], q_w[3];
-//    
-//    double pv[3] = { Vx(p_norm), Vy(p_norm), -1.0 };
-//    double qv[3] = { Vx(q_norm), Vy(q_norm), -1.0 };
-//    
-//    double Rpv[3], Rqv[3];
-//    
-//    matrix_product331(R1_inv, pv, Rpv);
-//    matrix_product331(R2_inv, qv, Rqv);
-//    
-//    matrix_sum(3, 1, 3, 1, Rpv, (double *) camera_1t, p_w);
-//    matrix_sum(3, 1, 3, 1, Rqv, (double *) camera_2t, q_w);
-//    
-//    /* Subtract out the camera center */
-//    double p_vec[3], q_vec[3];
-//    matrix_diff(3, 1, 3, 1, p_w, (double *) camera_1t, p_vec);
-//    matrix_diff(3, 1, 3, 1, q_w, (double *) camera_2t, q_vec);
-//    
-//    /* Compute the angle between the rays */
-//    double dot;
-//    matrix_product(1, 3, 3, 1, p_vec, q_vec, &dot);
-//    
-//    double mag = matrix_norm(3, 1, p_vec) * matrix_norm(3, 1, q_vec);
-//    
-//    return acos(CLAMP(dot / mag, -1.0 + 1.0e-8, 1.0 - 1.0e-8));
-//}
+double ComputeRayAngle(v2_t p, v2_t q, double *K1_inv, double *K2_inv, double*camera_1R, double *camera_2R,double *camera_1t, double *camera_2t)
+{
+    
+    double p3[3] = { Vx(p), Vy(p), 1.0 };
+    double q3[3] = { Vx(q), Vy(q), 1.0 };
+    
+    double p3_norm[3], q3_norm[3];
+    matrix_product331(K1_inv, p3, p3_norm);
+    matrix_product331(K2_inv, q3, q3_norm);
+    
+    v2_t p_norm = v2_new(p3_norm[0] / p3_norm[2], p3_norm[1] / p3_norm[2]);
+    v2_t q_norm = v2_new(q3_norm[0] / q3_norm[2], q3_norm[1] / q3_norm[2]);
+    
+    double R1_inv[9], R2_inv[9];
+    matrix_transpose(3, 3, (double *) camera_1R, R1_inv);
+    matrix_transpose(3, 3, (double *) camera_2R, R2_inv);
+    
+    double p_w[3], q_w[3];
+    
+    double pv[3] = { Vx(p_norm), Vy(p_norm), -1.0 };
+    double qv[3] = { Vx(q_norm), Vy(q_norm), -1.0 };
+    
+    double Rpv[3], Rqv[3];
+    
+    matrix_product331(R1_inv, pv, Rpv);
+    matrix_product331(R2_inv, qv, Rqv);
+    
+    matrix_sum(3, 1, 3, 1, Rpv, (double *) camera_1t, p_w);
+    matrix_sum(3, 1, 3, 1, Rqv, (double *) camera_2t, q_w);
+    
+    /* Subtract out the camera center */
+    double p_vec[3], q_vec[3];
+    matrix_diff(3, 1, 3, 1, p_w, (double *) camera_1t, p_vec);
+    matrix_diff(3, 1, 3, 1, q_w, (double *) camera_2t, q_vec);
+    
+    /* Compute the angle between the rays */
+    double dot;
+    matrix_product(1, 3, 3, 1, p_vec, q_vec, &dot);
+    
+    double mag = matrix_norm(3, 1, p_vec) * matrix_norm(3, 1, q_vec);
+    
+    double angle= (dot / mag);
+    
+    return (angle);
+}
 
 //bool CheckCheirality(v3_t p, double * camera_R, double *camera_t) 
 //{

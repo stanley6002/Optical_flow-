@@ -56,7 +56,7 @@ v3_t Triangulate(v2_t p, v2_t q, double *camera_1R,double *camera_1t,double *cam
                      double proj_error, bool in_front, double angle,
                      bool explicit_camera_centers, double *K1, double *K2);
   
-//double ComputeRayAngle(v2_t p, v2_t q, double *K1_inv, double *K2_inv, double*camera_1R, double *camera_2R,double *camera_1t, double *camera_2t);
+double ComputeRayAngle(v2_t p, v2_t q, double *K1_inv, double *K2_inv, double*camera_1R, double *camera_2R,double *camera_1t, double *camera_2t);
 //bool CheckCheirality(v3_t p, double * camera_R, double *camera_t); 
 //v2_t UndistortNormalizedPoint(v2_t p);
     

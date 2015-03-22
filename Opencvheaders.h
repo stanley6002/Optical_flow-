@@ -16,3 +16,7 @@
 #include <cxmisc.h>
 #include <iostream>
 #include <opencv2/core/core.hpp>
+
+
+#define IMAGE_WIDTH  320
+#define IMAGE_HEIGHT 240
