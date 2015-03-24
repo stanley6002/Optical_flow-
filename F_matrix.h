@@ -51,9 +51,10 @@ public:
     void TwoviewTriangulation ();
     void FindApicalAngle (float MaxAngle);
     void InitializeFirstPmatrix(); 
-    static float  Variance (v3_t* _3Dpts, const  float depth , const int size_);
     
-    void PointRefinement();
+    static float Variance (v3_t* m_3Dpts, const  float depth , const int size_);
+    
+    void PointRefinement(v3_t* m_3Dpts );
     
     inline bool CheckCheirality(v3_t pt)
     {
@@ -74,6 +75,7 @@ public:
     
     
 private:
+    bool TwoviewTria;
     bool skipFrame;
     int num_trial_Fmatrix;
     int num_trial_relativepose;

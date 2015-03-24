@@ -660,12 +660,12 @@ void EpipolarGeometry:: FindApicalAngle (float MaxAngle)
 
 EpipolarGeometry::~EpipolarGeometry()
 {
+    
     delete []  r_pt;
     delete []  l_pt;
     delete []  lrefined_pt;
     delete []  rrefined_pt;
-    delete []  _3Dpts;
-    
+
 }
 
 void EpipolarGeometry::InitializeFirstPmatrix()
@@ -680,9 +680,10 @@ void EpipolarGeometry::InitializeFirstPmatrix()
 
 void EpipolarGeometry::TwoviewTriangulation()
 {
-   int size_= num_ofrefined_pts;
-   _3Dpts= new v3_t[size_];
-   
+    TwoviewTria=1;
+    int size_= num_ofrefined_pts;
+    v3_t m_3Dpts [size_];
+    
     double error_tr=0.0;
       for (int i=0; i< size_ ;i++)
          {
@@ -696,14 +697,16 @@ void EpipolarGeometry::TwoviewTriangulation()
              q.p[0] = rrefined_pt[i].p[0];
              q.p[1] = rrefined_pt[i].p[1]; 
              temp = Triangulate(p, q, R1matrix , t1matrix ,R_relative, t_relative, error_tr, in_front, angle ,true,K1matrix,K2matrix);  
-             _3Dpts[i]= temp;
+             m_3Dpts[i]= temp;
              //printf("%0.4f %0.4f %0.4f\n", temp.p[0], temp.p[1],temp.p[2]);
           }
-       
+    PointRefinement(m_3Dpts);
+    
 }
 
-void EpipolarGeometry::PointRefinement()
+void EpipolarGeometry::PointRefinement(v3_t* m_3Dpts)
 {
+    
     bool* tempvector = new bool [num_ofrefined_pts];
     
     for (int i=0;i<num_ofrefined_pts;i++)
@@ -711,13 +714,13 @@ void EpipolarGeometry::PointRefinement()
     /// check Cheirality
     for (int i=0;i<num_ofrefined_pts;i++)
     {
-       if(CheckCheirality(_3Dpts[i]))
+       if(CheckCheirality(m_3Dpts[i]))
        { 
            tempvector[i]= true;
        }
     }
     
-    _3DdepthRefine (_3Dpts, tempvector, num_ofrefined_pts);
+    _3DdepthRefine ( m_3Dpts, tempvector, num_ofrefined_pts);
     
     int Numindex=0;
     
@@ -727,7 +730,7 @@ void EpipolarGeometry::PointRefinement()
             Numindex++;
      }
    
-    v3_t* new3Dpts    = new v3_t[Numindex];
+    v3_t* new3Dpts    = new v3_t [Numindex];
     v2_t* newLeftptas = new v2_t [Numindex];
     v2_t* newRightpts = new v2_t [Numindex];
     
@@ -737,7 +740,7 @@ void EpipolarGeometry::PointRefinement()
     {
         if(! tempvector[i])
         {
-            new3Dpts[index]= _3Dpts[i];
+            new3Dpts[index]=    m_3Dpts[i];
             newLeftptas[index]= lrefined_pt[i];
             newRightpts[index]= rrefined_pt[i];
             index++;
@@ -745,13 +748,17 @@ void EpipolarGeometry::PointRefinement()
     }
     
     num_ofrefined_pts= index;
-    
+
     for (int i=0; i< num_ofrefined_pts ;i++)
         printf("%0.4f %0.4f %0.4f\n", new3Dpts[i].p[0],new3Dpts[i].p[1],new3Dpts[i].p[2]);
-     
+   
+    delete  []  tempvector;
+    delete  []  new3Dpts;
+    delete  []  newLeftptas;
+    delete  []  newRightpts;
 
 }
- void EpipolarGeometry::_3DdepthRefine (v3_t* _3Dpts, bool* tempvector, int num_ofrefined_pts)
+ void EpipolarGeometry::_3DdepthRefine (v3_t* m_3Dpts, bool* tempvector, int num_ofrefined_pts)
 {
     
     int size_= num_ofrefined_pts;
@@ -769,7 +776,7 @@ void EpipolarGeometry::PointRefinement()
     
     for (int i=0;i< size_;i++)
     {
-             if ( _3Dpts[i].p[2]< min_number)
+             if ( m_3Dpts[i].p[2]< min_number)
                    tempvector[i]= true;                 
     }
     
@@ -783,7 +790,7 @@ void EpipolarGeometry::PointRefinement()
         
             Range_low = min_number   +   (index)*range;
             Range_upper = min_number +   (index+1)*range;
-            float x = (float) _3Dpts[i].p[2];
+            float x = (float) m_3Dpts[i].p[2];
             
                if ( Range_low < x && x <= Range_upper)              
                 {
@@ -805,16 +812,16 @@ void EpipolarGeometry::PointRefinement()
     }
 
     float depth = (min_number+(mx_index)*range);
-    float varince= Variance (_3Dpts, depth, size_);
+    float varince= Variance (m_3Dpts, depth, size_);
     float *densitytemp  = new float [size_]; 
     cout<< depth <<"variance "<<varince <<endl;
     for (int i=0;i< size_;i++)
     {
-         float x = (float) _3Dpts[i].p[2];
+         float x = (float) m_3Dpts[i].p[2];
          float a=-fabs(x-depth)*(1./(1.06*(sqrt(varince))*2.1));
           //float density = exp(a);
          densitytemp[i]=exp(a);
-        if (densitytemp[i]<0.2)
+        if (densitytemp[i]<0.3)
             tempvector[i] = true;
     }
 }
@@ -823,13 +830,13 @@ void EpipolarGeometry::PointRefinement()
 float  EpipolarGeometry:: Variance (v3_t* _3Dpts, const float depth , const int size_)
 {   
     float* tempz= new float [size_];
-    float sum=0.0;
+    float sum=0;
     int num=0;
     for (int i=0;i<size_;i++)
     { 
         if(_3Dpts[i].p[2]< 0 && _3Dpts[i].p[2]> -30 )
         {
-          tempz[i]= (_3Dpts[i].p[2]-depth)*(_3Dpts[i].p[2]-depth);
+          tempz[i]= (float)(_3Dpts[i].p[2]-depth)*(_3Dpts[i].p[2]-depth);
           sum=sum+tempz[i];
           num++;
         }
