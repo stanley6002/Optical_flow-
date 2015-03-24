@@ -16,7 +16,7 @@
 #include <cxmisc.h>
 #include <iostream>
 #include <opencv2/core/core.hpp>
-#include "glfw3.h"
+
 
 
 

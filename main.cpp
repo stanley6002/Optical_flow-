@@ -12,6 +12,7 @@
 #include "matchingandtracking.h"
 #include "FFME.h"
 #include "miscul.h"
+#include "OpenglPlot.h"
 
 CvCapture *camCapture;
 
@@ -205,7 +206,11 @@ int main (int argc, const char * argv[])
     //int firstcapture =1;
     
     IplImage*  frame ;
+    
     VideoProcessing VideoProcessing (Img_width, Img_height);
+    
+    OpenGLPlot OpenGLPlot (Img_width, Img_height);
+   
     
     /// flow control parameters
     
@@ -302,6 +307,11 @@ int main (int argc, const char * argv[])
                         EpipolarGeometry.InitializeFirstPmatrix();
                         EpipolarGeometry.TwoviewTriangulation();
                         
+                        OpenGLPlot. Setview();
+                        OpenGLPlot. PlotCamera();
+                          
+                          
+                          
                         //break;
                         }             
                         imgB= cvCloneImage(frame);
