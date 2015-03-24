@@ -48,14 +48,16 @@ public:
     void CenterizedFeaturePoint    (v2_t* lrefined_pt, v2_t* rrefined_pt, int num_ofrefined_pts);
     void InitializeIntrinsicMatrix (double* Kmatrix);
     
-    void TwoviewTriangulation ();
+    void TwoviewTriangulation (vector<v2_t> & left_pts,vector<v2_t> & right_pts, vector<v3_t> & V3Dpts );
     void FindApicalAngle (float MaxAngle);
     void InitializeFirstPmatrix(); 
     
     static float Variance (v3_t* m_3Dpts, const  float depth , const int size_);
     
-    void PointRefinement(v3_t* m_3Dpts );
-    
+    void PointRefinement(v3_t* m_3Dpts,vector<v2_t> & left_pts,vector<v2_t> & right_pts, vector<v3_t> & V3Dpts);
+    inline int  NumofPts()
+        {return( num_ofrefined_pts);}
+
     inline bool CheckCheirality(v3_t pt)
     {
         bool Cheirality=false;
@@ -83,7 +85,7 @@ private:
     double Numofpts;
     int essential; // control f _matrix
     double Fmatrix[9];
-    static void _3DdepthRefine (v3_t* _3Dpts, bool* tempvector, int num_ofrefined_pts);
+    static void _3DdepthRefine (v3_t* m_3Dpts, bool* tempvector, int num_ofrefined_pts);
     //IplImage* ImageGray1;
     //IplImage* ImageGray2;
     //bool Surf_activate ;

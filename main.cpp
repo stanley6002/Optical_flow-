@@ -209,7 +209,7 @@ int main (int argc, const char * argv[])
     
     VideoProcessing VideoProcessing (Img_width, Img_height);
     
-    OpenGLPlot OpenGLPlot (Img_width, Img_height);
+    OpenGLPlot OpenGLPlot (Img_width*2, Img_height*2);
    
     
     /// flow control parameters
@@ -285,7 +285,7 @@ int main (int argc, const char * argv[])
                     EpipolarGeometry.FindFundamentalMatrix(); 
                     EpipolarGeometry.FindRelativePose();
                     
-                    float MaxAngle =0.06;
+                    float MaxAngle =0.075;
                     
                     EpipolarGeometry.FindApicalAngle(MaxAngle);
                     
@@ -303,17 +303,19 @@ int main (int argc, const char * argv[])
                     {
                       if(! ThirdFrame)
                       {
+                        vector<v2_t> left_pts;
+                        vector<v2_t> right_pts;
+                        vector<v3_t> V3Dpts;    
+                        
                         SkipthisFrame =0; 
                         EpipolarGeometry.InitializeFirstPmatrix();
-                        EpipolarGeometry.TwoviewTriangulation();
+                        EpipolarGeometry.TwoviewTriangulation(left_pts,right_pts,V3Dpts);
                         
                         OpenGLPlot. Setview();
-                        OpenGLPlot. PlotCamera();
+                        OpenGLPlot. PlotCamera(EpipolarGeometry.NumofPts(), V3Dpts);
+                           
                           
-                          
-                          
-                        //break;
-                        }             
+                      }             
                         imgB= cvCloneImage(frame);
                       }   
                   }

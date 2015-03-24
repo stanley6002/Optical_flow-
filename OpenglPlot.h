@@ -6,6 +6,8 @@
 //  Copyright 2015 __MyCompanyName__. All rights reserved.
 //
 #include "glfw3.h"
+#include <vector.h>
+#include "vector.h"
 
 class OpenGLPlot 
 {
@@ -16,15 +18,15 @@ public:
     
     GLFWwindow* window;
 
-    
-         OpenGLPlot (int width , int height);
-        ~ OpenGLPlot ();
+    OpenGLPlot (int width , int height);
+    ~ OpenGLPlot ();
     
     void error_callback(int error, const char* description);
     //void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
     void Initialized();
     void Setview();
-    void PlotCamera();
+    void PlotCamera(int size_, const vector<v3_t> V3Dpts);
+    void SetupFrustrum();
 private:
     
 };
