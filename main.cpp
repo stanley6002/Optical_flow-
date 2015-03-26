@@ -16,8 +16,6 @@
 
 CvCapture *camCapture;
 
-
-
 #define CenterX(x) ((x)-IMAGE_WIDTH/2)
 #define CenterY(x) ((x)-IMAGE_HEIGHT/2)
 
@@ -33,13 +31,11 @@ using namespace std;
 
 
 # define PlotFeatureTracking
-void _3DPtsRefinement (const v2_t* nextPtsv2, const v2_t*cornersv2, v3_t*_3DPts, const int NumofPts, 
-                                vector< v2_t > & nextPtsvRefined , vector< v2_t > &cornersvRefined, vector <v3_t> &_3DPtsRefined )
+void _3DPtsRefinement (const v2_t* nextPtsv2, const v2_t*cornersv2, v3_t*_3DPts, const int NumofPts,  vector< v2_t > & nextPtsvRefined , vector< v2_t > &cornersvRefined, vector <v3_t> &_3DPtsRefined )
 {
     int tempvector[NumofPts];
     memset(tempvector,0, sizeof(tempvector) );
     int tempNumPts= NumofPts;
-    
     
     for(int i=0;i<NumofPts;i++) 
     {
@@ -70,8 +66,6 @@ void _3DPtsRefinement (const v2_t* nextPtsv2, const v2_t*cornersv2, v3_t*_3DPts,
 void RefindMatchedPts(vector<Point2f>& corners , vector<Point2f>& NestPts, int ImgWidth ,int ImgHeight)
 {
     int Size_= (int) corners.size();
-    
-    //cout<<"before "<<Size_<<endl;
     
     vector<Point2f> Tempcorner;
     vector<Point2f> TempNestPts;    
@@ -116,8 +110,7 @@ void ConnectedVideoSequence(vector<Point2f> tempCorners,vector<Point2f> NestPts,
     
     referencePts = tempCorners;
     matchedPts   = NestPts;
-    
-    
+       
     for (int i=0; i< ReferencePtsize; i++)
     {
         if (referencePts[i].x !=-99999 && referencePts[i].y !=-99999  )
@@ -163,7 +156,6 @@ void ConnectedVideoSequence(vector<Point2f> tempCorners,vector<Point2f> NestPts,
 int main (int argc, const char * argv[])
 {
 
-    
     if (!(camCapture = cvCaptureFromCAM(CV_CAP_ANY))) 
     {
         cout << "Failed to capture from camera" << endl;
@@ -202,21 +194,20 @@ int main (int argc, const char * argv[])
     //IplImage* Two_image = 0;
     
     vector<Point2f> tempCorners;
-    //int SkipThisFrame=0;
-    //int firstcapture =1;
     
     IplImage*  frame ;
     
     VideoProcessing VideoProcessing (Img_width, Img_height);
     
     OpenGLPlot OpenGLPlot (Img_width*2, Img_height*2);
-   
     
     /// flow control parameters
     
     int firstcapture = 1;
     bool SkipthisFrame=0;
     bool ThirdFrame=0;
+    
+    //  flow control 
     do 
         if ((cameraFrame = cvQueryFrame(camCapture))) 
          {
@@ -243,7 +234,6 @@ int main (int argc, const char * argv[])
                             CaptureFrames =1;
                         }
                      }
-
                 }
                 else 
                 {
@@ -261,7 +251,6 @@ int main (int argc, const char * argv[])
                 }
                 if(CaptureFrames==1)
                 {              
-                    
                     imgA= frame;  // new frame //
                     imgC= cvCloneImage(imgB);  // previous frame //
                     
@@ -276,16 +265,16 @@ int main (int argc, const char * argv[])
                     // for plot 
                     int size_match= (int) match_query.size();
                     
-                    int numTrialFmatrix = 200;
-                    int numTrialRelativePose  =200;
+                    int numTrialFmatrix = 50;
+                    int numTrialRelativePose  =50;
                     int Focuslength= 280;
-                    int Ransac_threshold=2.0;
+                    int Ransac_threshold= 2.0;
                     
                     EpipolarGeometry EpipolarGeometry(match_query, match_train, size_match, numTrialFmatrix, numTrialRelativePose, Focuslength, Ransac_threshold);  
                     EpipolarGeometry.FindFundamentalMatrix(); 
                     EpipolarGeometry.FindRelativePose();
                     
-                    float MaxAngle =0.075;
+                    float MaxAngle =0.065;
                     
                     EpipolarGeometry.FindApicalAngle(MaxAngle);
                     
@@ -312,8 +301,8 @@ int main (int argc, const char * argv[])
                         EpipolarGeometry.TwoviewTriangulation(left_pts,right_pts,V3Dpts);
                         
                         OpenGLPlot. Setview();
-                        OpenGLPlot. PlotCamera(EpipolarGeometry.NumofPts(), V3Dpts);
-                           
+                        OpenGLPlot. PlotCamera(EpipolarGeometry.t_relative);
+                        OpenGLPlot. PlotVertex(EpipolarGeometry.NumofPts(), V3Dpts);                           
                           
                       }             
                         imgB= cvCloneImage(frame);

@@ -658,7 +658,6 @@ int find_extrinsics_essential_multipt(double *E, int n,
     return 1;
 }
 
-
 static v3_t *condition_points_3D(int num_points, v3_t *pts, double *T) {
     v3_t *pts_new = (v3_t *) malloc(sizeof(v3_t) * num_points);
     v3_t *pts_zero_mean = (v3_t *) malloc(sizeof(v3_t) * num_points);

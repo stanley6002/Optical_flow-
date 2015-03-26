@@ -12,8 +12,8 @@ int EstimatePose5Point(v2_t* k1,
                        double *R, double *t)
 {
     int num_pts = (int) matches;
-   //  v2_t *k1_pts = new v2_t[10];
-  // v2_t *k2_pts = new v2_t[10];
+  //  v2_t *k1_pts = new v2_t[10];
+  //  v2_t *k2_pts = new v2_t[10];
     
   //  for (int i = 0; i < num_pts; i++) {
   //      int idx1 = matches[i].m_idx1;
@@ -23,11 +23,11 @@ int EstimatePose5Point(v2_t* k1,
   //      k2_pts[i] = v2_new(k2[idx2].m_x, k2[idx2].m_y);
   // }
     
-    int num_inliers = compute_pose_ransac(num_pts, k1, k2, 
-    K1, K2, threshold, num_trials, R, t);
+  int num_inliers = compute_pose_ransac(num_pts, k1, k2, 
+                                        K1, K2, threshold, num_trials, R, t);
     
    
-   //    delete [] k1_pts;
+//    delete [] k1_pts;
 //    delete [] k2_pts;
 //    matrix_print(3,3, R);
 //    for (int i=0;i<3;i++)
@@ -37,7 +37,7 @@ int EstimatePose5Point(v2_t* k1,
     return num_inliers;
 }
 
- int estimate_fmatrix_ransac_matches(int num_pts, v3_t *a_pts, v3_t *b_pts, 
+int estimate_fmatrix_ransac_matches(int num_pts, v3_t *a_pts, v3_t *b_pts, 
                                      int num_trials, double threshold, 
                                      double success_ratio,
                                      int essential, double *F) 
@@ -571,7 +571,7 @@ void refine_fmatrix_nonlinear_matches(int num_pts, v3_t *r_pts, v3_t *l_pts,
     memcpy(Ftmp, F0, sizeof(double) * 9);
     int x=8;
     
-    lmdif_driver2(fmatrix_residuals, num_pts, x, Ftmp, 0.000001);   
+    lmdif_driver2(fmatrix_residuals, num_pts, x, Ftmp, 0.00001);   
     Ftmp[8] = global_scale;
     //matrix_print(3, 3, Ftmp);
     closest_rank2_matrix(Ftmp, Fout, U, VT);

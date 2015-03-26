@@ -41,45 +41,95 @@ void OpenGLPlot:: Setview()
         glLineWidth(4);
         glfwGetFramebufferSize(window, &this->width, &this->height);
         float ratio = this->width / (float) this-> height;
-                  
+        //glEnable(GL_DEPTH_TEST);
+    
         glViewport(0, 0, this->width, this->height);
         glClear(GL_COLOR_BUFFER_BIT);
                   
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
-    
-        glOrtho(-5, 5, -10.f, 10.f, 10.f, -10.f);
+        
+        glViewport(0, 0, width, height);
+        glClear(GL_COLOR_BUFFER_BIT);              
         glMatrixMode(GL_MODELVIEW);
+       
+    
+        float tm[16];
+    
+        tm[0] = 1.0f;   tm[1] = 0.0f;   tm[2] = 0.0f;   tm[3] = 0.0f;
+        tm[4] = 0.0f;   tm[5] = 1.0f;   tm[6] = 0.0f;   tm[7] = 0.0f;
+        tm[8] = 0.0f;   tm[9] = 0.0f;   tm[10]= 1.0f;   tm[11]= 0.0f;
+        tm[12]= 0.0f;   tm[13]= 0.0f;   tm[14]= -20.0f;  tm[15]= 1.0f;
+    
+        glLoadMatrixf(tm);
+
+        //glOrtho(-400.0, 400.0, -320.f, 320.f, 10.f, -10.f);
+       
         SetupFrustrum(); 
 }
 void OpenGLPlot::SetupFrustrum()
 {
-        glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
-        double Znear = 0.03;
-        glFrustum(- Znear, Znear , 0.75*Znear, -0.75*Znear , Znear , 20);
-        glScalef(1 , 1, -1);
+    glMatrixMode (GL_PROJECTION);
+    glLoadIdentity ();
+    glFrustum (-1.0, 1.0, -1.0, 1.0, 1.2 , 50.0);
+    glMatrixMode (GL_MODELVIEW);
+    glPushMatrix();
 }
-void OpenGLPlot::PlotCamera(int size_, const vector<v3_t> V3Dpts)
+void OpenGLPlot::PlotCamera(double *t_relative)
+{
+    glPushMatrix();
+    glTranslated(0.0 ,-0.0  ,0.0); 
+    glBegin(GL_LINES);
+    glColor3f(1, 0, 0);
+    glVertex3f(0.0f, 0.0f, 0.0f);
+    glVertex3f(1.6f, 0.0f, 0.0f);
+    glColor3f(0, 1, 0);
+    glVertex3f(0.0f, 0.0f,0.0f);
+    glVertex3f(0.0f, 1.6f, 0.0f);
+    glColor3f(0, 0, 1); 
+    glVertex3f(0.0f, 0.0f, 0.0f);
+    glVertex3f(0.0f, 0.0f, 1.6f);
+    glEnd();
+    glTranslated(t_relative[0] ,t_relative[1]  ,t_relative[2]); 
+    glBegin(GL_LINES);
+    glColor3f(1, 0, 0);
+    glVertex3f(0.0f, 0.0f, 0.0f);
+    glVertex3f(1.6f, 0.0f, 0.0f);
+    glColor3f(0, 1, 0);
+    glVertex3f(0.0f, 0.0f,0.0f);
+    glVertex3f(0.0f, 1.6f, 0.0f);
+    glColor3f(0, 0, 1); 
+    glVertex3f(0.0f, 0.0f, 0.0f);
+    glVertex3f(0.0f, 0.0f, 1.6f);
+    glEnd();
+    glPopMatrix();
+    //glPushMatrix();
+    //glClear(GL_COLOR_BUFFER_BIT);
+   
+    
+}
+ void OpenGLPlot::PlotVertex(int size_, const vector<v3_t> V3Dpts)
 {
 
-        glLoadIdentity();
-        glBegin(GL_POINTS);
-        for (int i=0;i<5;i++)
-            {
-               
-             glVertex3f(2.0f,2.0f,-3.0f);
-             glColor3f((1.0f),(1.0f),(1.0f));
-        
-            }
-  
+    glLoadIdentity();
+    glPointSize(2.0f);
+    glBegin( GL_POINTS);
+    for (int i=0;i<size_;i++)
+    {
+        glColor3f(1, 1, 1); 
+        glVertex3f(V3Dpts[i].p[0],V3Dpts[i].p[1] ,V3Dpts[i].p[2]);
+        //cout<< V3Dpts[i].p[0]<<" "<<V3Dpts[i].p[1]<<" "<<V3Dpts[i].p[2]<<endl;
+    }
     glEnd();
-    
-    
-        glfwSwapBuffers(window);
-        glfwPollEvents();
+    glPushMatrix();
+
+
+    //glDisable(GL_DEPTH_TEST);
+    glfwSwapBuffers(window);
+    glfwPollEvents();
 
 }
+
 OpenGLPlot:: OpenGLPlot (int width, int height)
  {
          OpenGLPlot:: height = height;

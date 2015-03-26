@@ -743,7 +743,7 @@ int compute_pose_ransac(int n, v2_t *r_pts, v2_t *l_pts,
         find_extrinsics_essential_multipt(E_best, n, 
                                           r_pts_norm, l_pts_norm, 
                                           R_out, t_out);
-        //matrix_print(3,1,t_out);
+        
         int inliers = 0;
         double E2[9];
         double tmp[9], F_best[9];
@@ -768,9 +768,6 @@ int compute_pose_ransac(int n, v2_t *r_pts, v2_t *l_pts,
                                    thresh_norm, F_best, &best_inlier,
                                    &score);
         
-        // matrix_print(3, 3, F_best);
-        
-        //  printf("  inliers: %d / %d [score: %0.3e]\n", inliers, n, score);
         fflush(stdout);
     }
     

@@ -15,17 +15,18 @@ using namespace std;
 void F_matrix_process (int num_pts, v3_t* r_pt, v3_t* l_pt,double *F, int num_trial, int F_threshold, int essential, matched* refined_pts, int ith_pair)
 {
     int F_estimated;
-    //    int estimate_fmatrix_ransac_matches(int num_pts, v3_t *a_pts, v3_t *b_pts, 
+   //    int estimate_fmatrix_ransac_matches(int num_pts, v3_t *a_pts, v3_t *b_pts, 
    //     int num_trials, double threshold, 
    //      double success_ratio,
    //      int essential, double *F)
-    //double success_ratio;
-    F_estimated= estimate_fmatrix_ransac_matches(num_pts, r_pt, l_pt, 100, 2.0, 2.0,essential, F); 
-    //matrix_print(3, 3, F);
-    double  e1_tmp[3], e2_tmp[3];
+   //double success_ratio;
+    F_estimated= estimate_fmatrix_ransac_matches(num_pts, r_pt, l_pt, 50, 2.0, 2.0,essential, F); 
+   
+   //matrix_print(3, 3, F);
+   // double  e1_tmp[3], e2_tmp[3];
    // F_estimated= estimate_fmatrix_linear(num_pts,r_pt,l_pt, 
    //                             1,F,  e1_tmp, e2_tmp); 
-    double error_brefine=0;
+   // double error_brefine=0;
 
     vector<int> inliers;
     
@@ -88,7 +89,8 @@ void F_matrix_process (int num_pts, v3_t* r_pt, v3_t* l_pt,double *F, int num_tr
             //cvCircle(IGray_l, newmatched, 3, CV_RGB(255,255,255));
         }
        refine_fmatrix_nonlinear_matches((int)inliers.size(), r_ptinlier, l_ptinlier, F0, F); 
-    } 
+    }
+    
     cout<<"nonlinear_fundamental_matrix: "<<endl;
     matrix_print(3,3,F);
     vector<int> non_inliers;
@@ -553,12 +555,6 @@ EpipolarGeometry::EpipolarGeometry(const std::vector<CvPoint2D32f> match_query ,
         l_pt[i].p[2]=1.0;
     }
     
-  
-    //cout<< this->FocusLength<<endl;
-    
-    //MainProcess();
-    
-    
 }
 void EpipolarGeometry::MainProcess()
 {
@@ -587,8 +583,9 @@ void EpipolarGeometry::FindRelativePose()
     //matrix_print(3,3,K1matrix);
     //matrix_print(3,3,K2matrix);
     
-    compute_pose_ransac(num_ofrefined_pts, lrefined_pt, rrefined_pt, K1matrix, K2matrix, Ransac_threshold, num_trial_relativepose , R_out ,t_out);
+    int numinliers = compute_pose_ransac(num_ofrefined_pts, lrefined_pt, rrefined_pt, K1matrix, K2matrix, Ransac_threshold, num_trial_relativepose , R_out ,t_out);
     
+    cout<<"Number of inliers " <<numinliers<<endl;
     matrix_transpose_product(3, 3, 3, 1, R_out, t_out , camera2t);
     matrix_scale(3, 1, camera2t, -1.0, t_out);
     matrix_print(3,1,t_out); 
@@ -616,8 +613,6 @@ void EpipolarGeometry::CenterizedFeaturePoint (v2_t* lrefined_pt, v2_t* rrefined
         rrefined_pt[i].p[1]=q.p[1];
     }
     
-
-
 }
 void EpipolarGeometry::FindFundamentalMatrix()
 {
@@ -628,7 +623,7 @@ void EpipolarGeometry::FindFundamentalMatrix()
     
     F_matrix_process (this->Numofpts,  r_pt, l_pt, F, this->num_trial_Fmatrix, 10 ,  this->essential, refined_pts, 0);
     
-    num_ofrefined_pts= (int)refined_pts[0].R_pts.size();
+    num_ofrefined_pts =(int)refined_pts[0].R_pts.size();
     
     lrefined_pt= new v2_t[num_ofrefined_pts];
     rrefined_pt= new v2_t[num_ofrefined_pts];

@@ -25,7 +25,8 @@ public:
     //void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
     void Initialized();
     void Setview();
-    void PlotCamera(int size_, const vector<v3_t> V3Dpts);
+    void PlotVertex(int size_, const vector<v3_t> V3Dpts);
+    void PlotCamera(double* t_relative);
     void SetupFrustrum();
 private:
     
