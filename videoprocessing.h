@@ -17,6 +17,7 @@ public:
     int ImgHeight;
     
     bool captureNextFrame;
+    bool captureThirdFrame;
     
     IplImage* imgGray1;
     IplImage* imgGray2;

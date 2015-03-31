@@ -33,7 +33,7 @@ void F_matrix_process (int num_pts, v3_t* r_pt, v3_t* l_pt,double *F, int num_tr
     for (int i=0; i<num_pts;i++)
     {
         double distance = fmatrix_compute_residual(F,r_pt[i],l_pt[i]);
-        if (distance<50)
+        if (distance<60)
         { 
         
         //cout<<distance1<<endl;
@@ -99,7 +99,7 @@ void F_matrix_process (int num_pts, v3_t* r_pt, v3_t* l_pt,double *F, int num_tr
         double distance = fmatrix_compute_residual(F,r_pt[i],l_pt[i]);
         // double distance= fmatrix_compute_distance(F,  r_pt[i],  l_pt[i]); 
       
-        if (distance<50)
+        if (distance<60)
         {
             non_inliers.push_back(i);
             // cout<< l_pt[i].p[0]<<" "<<l_pt[i].p[1]<<" "<<r_pt[i].p[0]<<" "<<r_pt[i].p[1]<<endl;
@@ -606,7 +606,6 @@ void EpipolarGeometry::CenterizedFeaturePoint (v2_t* lrefined_pt, v2_t* rrefined
         q.p[0]= CenterX(rrefined_pt[i].p[0]); 
         q.p[1]= CenterY(rrefined_pt[i].p[1]);
         
-        
         lrefined_pt[i].p[0]=p.p[0];
         lrefined_pt[i].p[1]=p.p[1];
         rrefined_pt[i].p[0]=q.p[0];
@@ -620,7 +619,7 @@ void EpipolarGeometry::FindFundamentalMatrix()
     matched * refined_pts= new matched[1]; 
     
     double F[9];
-    
+
     F_matrix_process (this->Numofpts,  r_pt, l_pt, F, this->num_trial_Fmatrix, 10 ,  this->essential, refined_pts, 0);
     
     num_ofrefined_pts =(int)refined_pts[0].R_pts.size();
@@ -842,7 +841,6 @@ float  EpipolarGeometry:: Variance (v3_t* _3Dpts, const float depth , const int 
     }
     
     return( sum *= 1. / num );
-
 
 }
 IplImage* EpipolarGeometry:: plot_two_imagesf(IplImage *IGray, IplImage *IGray1)

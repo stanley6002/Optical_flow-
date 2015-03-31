@@ -53,12 +53,11 @@ void OpenGLPlot:: Setview()
         glClear(GL_COLOR_BUFFER_BIT);              
         glMatrixMode(GL_MODELVIEW);
        
-    
         float tm[16];
     
         tm[0] = 1.0f;   tm[1] = 0.0f;   tm[2] = 0.0f;   tm[3] = 0.0f;
         tm[4] = 0.0f;   tm[5] = 1.0f;   tm[6] = 0.0f;   tm[7] = 0.0f;
-        tm[8] = 0.0f;   tm[9] = 0.0f;   tm[10]= 1.0f;   tm[11]= 0.0f;
+        tm[8] = 0.0f;   tm[9] = 0.0f;   tm[10]=  1.0f;   tm[11]= 0.0f;
         tm[12]= 0.0f;   tm[13]= 0.0f;   tm[14]= -20.0f;  tm[15]= 1.0f;
     
         glLoadMatrixf(tm);
@@ -71,7 +70,9 @@ void OpenGLPlot::SetupFrustrum()
 {
     glMatrixMode (GL_PROJECTION);
     glLoadIdentity ();
-    glFrustum (-1.0, 1.0, -1.0, 1.0, 1.2 , 50.0);
+    glFrustum (-4.0, 4.0, -4.0, 4.0, 5.5 , 55.5);
+    //glOrtho(0.0,320,240, 0.0f, 10.0f, 20.0f);
+    
     glMatrixMode (GL_MODELVIEW);
     glPushMatrix();
 }
@@ -90,6 +91,7 @@ void OpenGLPlot::PlotCamera(double *t_relative)
     glVertex3f(0.0f, 0.0f, 0.0f);
     glVertex3f(0.0f, 0.0f, 1.6f);
     glEnd();
+    
     glTranslated(t_relative[0] ,t_relative[1]  ,t_relative[2]); 
     glBegin(GL_LINES);
     glColor3f(1, 0, 0);

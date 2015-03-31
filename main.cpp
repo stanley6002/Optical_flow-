@@ -13,6 +13,7 @@
 #include "FFME.h"
 #include "miscul.h"
 #include "OpenglPlot.h"
+#include "FeaturePoint.h"
 
 CvCapture *camCapture;
 
@@ -99,60 +100,6 @@ void RefindMatchedPts(vector<Point2f>& corners , vector<Point2f>& NestPts, int I
     //cout<<"after "<<(int)corners.size()<<endl;
 
 }
-void ConnectedVideoSequence(vector<Point2f> tempCorners,vector<Point2f> NestPts, vector<Point>& tempPts)
-{
-    
-    int ReferencePtsize =   (int) tempCorners.size();
-    int MatchedPtsize   =   (int) NestPts.size();
-       
-    vector<Point2f> referencePts;
-    vector<Point2f> matchedPts;
-    
-    referencePts = tempCorners;
-    matchedPts   = NestPts;
-       
-    for (int i=0; i< ReferencePtsize; i++)
-    {
-        if (referencePts[i].x !=-99999 && referencePts[i].y !=-99999  )
-        {
-            int x =  referencePts[i].x;
-            int y =  referencePts[i].y;
-            
-            for (int j=0; j<MatchedPtsize; j++)
-            {
-                
-                if (matchedPts[j].x !=-99999 && matchedPts[j].y !=-99999  )
-                {
-                    if  (matchedPts[j].x > 0 && matchedPts[j].y > 0)
-                    {
-                        int x_m =  matchedPts[j].x;
-                        int y_m =  matchedPts[j].y;
-                        
-                        if (sqrt(((x-x_m)*(x-x_m))+((y-y_m)*(y-y_m)))<=1.414)
-                        {
-                            Point pt;
-                            
-                            pt.x = i;
-                            pt.y = j;
-                            
-                            tempPts.push_back(pt);
-                            
-                            matchedPts[j].x=-99999;
-                            matchedPts[j].y=-99999;
-                            
-                            referencePts[i].x = -99999;
-                            referencePts[i].y = -99999;
-                            
-                        }
-                        
-                    } 
-                }    
-            }
-        }
-     }
-  }
-
-
 int main (int argc, const char * argv[])
 {
 
@@ -197,9 +144,13 @@ int main (int argc, const char * argv[])
     
     IplImage*  frame ;
     
-    VideoProcessing VideoProcessing (Img_width, Img_height);
-    
+    VideoProcessing VideoProcessing (Img_width, Img_height); 
+   
     OpenGLPlot OpenGLPlot (Img_width*2, Img_height*2);
+    
+    CameraPose CameraPose;
+    
+    FeaturePts FeaturePts;
     
     /// flow control parameters
     
@@ -224,7 +175,7 @@ int main (int argc, const char * argv[])
                 bool CaptureFrames=0; 
                 if (! SkipthisFrame) 
                 {
-                    frame = skipNFrames(camCapture, 1);  
+                    frame = skipNFrames(camCapture, 0);  
                     frame = VideoProcessing.CaptureInitialFrame(camCapture);
                   
                     if (! CaptureFrames)
@@ -266,16 +217,13 @@ int main (int argc, const char * argv[])
                     int size_match= (int) match_query.size();
                     
                     int numTrialFmatrix = 50;
-                    int numTrialRelativePose  =50;
+                    int numTrialRelativePose  =20;
                     int Focuslength= 280;
                     int Ransac_threshold= 2.0;
-                    
+                    float MaxAngle =0.065;
                     EpipolarGeometry EpipolarGeometry(match_query, match_train, size_match, numTrialFmatrix, numTrialRelativePose, Focuslength, Ransac_threshold);  
                     EpipolarGeometry.FindFundamentalMatrix(); 
-                    EpipolarGeometry.FindRelativePose();
-                    
-                    float MaxAngle =0.065;
-                    
+                    EpipolarGeometry.FindRelativePose();    
                     EpipolarGeometry.FindApicalAngle(MaxAngle);
                     
                     IplImage* Two_image=EpipolarGeometry.plot_two_imagesf(imgC, imgA);
@@ -283,34 +231,51 @@ int main (int argc, const char * argv[])
                     
                     cout<<EpipolarGeometry.ApicalAngle<<endl;
                     cout<<endl;
-                   
+                    
                     if  (EpipolarGeometry.SkipFrame())
                     {   
                         SkipthisFrame =1;
                     }
                     else
                     {
-                      if(! ThirdFrame)
-                      {
-                        vector<v2_t> left_pts;
-                        vector<v2_t> right_pts;
-                        vector<v3_t> V3Dpts;    
-                        
-                        SkipthisFrame =0; 
-                        EpipolarGeometry.InitializeFirstPmatrix();
-                        EpipolarGeometry.TwoviewTriangulation(left_pts,right_pts,V3Dpts);
-                        
-                        OpenGLPlot. Setview();
-                        OpenGLPlot. PlotCamera(EpipolarGeometry.t_relative);
-                        OpenGLPlot. PlotVertex(EpipolarGeometry.NumofPts(), V3Dpts);                           
-                          
-                      }             
+                        if(! ThirdFrame)
+                        {
+                            vector<v2_t> left_pts;
+                            vector<v2_t> right_pts;
+                            vector<v3_t> V3Dpts;    
+                            
+                            SkipthisFrame =0; 
+                            EpipolarGeometry.InitializeFirstPmatrix();
+                            EpipolarGeometry.TwoviewTriangulation(left_pts,right_pts,V3Dpts);
+                            /*
+                            OpenGLPlot. Setview();
+                            OpenGLPlot. PlotCamera(EpipolarGeometry.t_relative);
+                            OpenGLPlot. PlotVertex(EpipolarGeometry.NumofPts(), V3Dpts);   
+                            */
+                            //for (int i=0;i<100;i++)
+                            //    cout<< EpipolarGeometry.rrefined_pt[i].p[0]<<" "<<EpipolarGeometry.rrefined_pt[i].p[1]<<" "<<EpipolarGeometry.lrefined_pt[i].p[0]<<" "<<EpipolarGeometry.lrefined_pt[i].p[1]<<endl;
+                            
+                            FeaturePts.Loadv2Pts(left_pts, right_pts);  // frame: Right-> left -> Right 
+                            FeaturePts.Loadv3Pts(V3Dpts); 
+                        }
+                        else
+                        {
+                             FeaturePts.LoadFeatureList();
+                             /// Connect feature point and create feature tracks 
+                             FeaturePts.ConnectedVideoSequence(FeaturePts.m_rightPts, EpipolarGeometry.lrefined_pt /*connected pts*/ ,
+                                                               EpipolarGeometry.rrefined_pt  /* current pts*/ , EpipolarGeometry.num_ofrefined_pts);
+                           
+
+                            break;
+                                                      
+                        }
                         imgB= cvCloneImage(frame);
-                      }   
-                  }
+                        ThirdFrame= true;
+                    } 
+                }
                  firstcapture=0;
-            }        
-            _1stframe=false;    
+            }
+          _1stframe=false;    
       }
     
     while (true) ;

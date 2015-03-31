@@ -700,12 +700,14 @@ int compute_pose_ransac(int n, v2_t *r_pts, v2_t *l_pts,
             matrix_transpose_product(3, 3, 3, 3, K2_inv, E2, tmp);
             matrix_product(3, 3, 3, 3, tmp, K1_inv, F);
             
+      
+            
             inliers = evaluate_Ematrix(n, r_pts, l_pts, // r_pts_norm, l_pts_norm, 
                                        thresh_norm, F, // E + 9 * i, 
                                        &best_inlier, &score);
             
-            if (inliers > max_inliers ||
-                (inliers == max_inliers && score < min_score)) {
+            if (inliers > max_inliers || (inliers == max_inliers && score < min_score)) 
+            {
                 best = 1;
                 max_inliers = inliers;
                 min_score = score;
@@ -717,9 +719,10 @@ int compute_pose_ransac(int n, v2_t *r_pts, v2_t *l_pts,
             inliers_hyp[i] = inliers;
         }
         
-        if (best) {
-            for (i = 0; i < num_hyp; i++) {
-                if (inliers_hyp[i] > first_hyp) {
+        if (best) 
+        {
+           for (i = 0; i < num_hyp; i++) {
+              if (inliers_hyp[i] > first_hyp) {
                     first_hyp = inliers_hyp[i];
                     first_hyp_idx = i;
                 }
@@ -740,6 +743,7 @@ int compute_pose_ransac(int n, v2_t *r_pts, v2_t *l_pts,
         double score;
         // find_extrinsics_essential(E_best, r_best, l_best, R_out, t_out);
         int success = 
+       
         find_extrinsics_essential_multipt(E_best, n, 
                                           r_pts_norm, l_pts_norm, 
                                           R_out, t_out);
@@ -767,11 +771,10 @@ int compute_pose_ransac(int n, v2_t *r_pts, v2_t *l_pts,
         inliers = evaluate_Ematrix(n, r_pts, l_pts, // r_pts_norm, l_pts_norm, 
                                    thresh_norm, F_best, &best_inlier,
                                    &score);
-        
         fflush(stdout);
     }
     
-    // matrix_print(3, 3, E_best);
+   
     
     free(r_pts_norm);
     free(l_pts_norm);

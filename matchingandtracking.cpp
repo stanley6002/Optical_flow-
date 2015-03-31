@@ -180,14 +180,14 @@ void LKFeatures::  LKFeaturesTracking ()
    if (UseOptical_flow)
    {
        goodFeaturesToTrack(ImageGray1, corners, 400, 0.001, 10);
-       cornerSubPix(ImageGray1, corners, cv::Size(9,9), cv::Size(-1,-1), cv::TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 20, 0.001 ));
-       calcOpticalFlowPyrLK(ImageGray2, ImageGray1, corners, nextPts, status, err, cv::Size(30,30));
+       cornerSubPix( ImageGray1, corners, cv::Size(11,11), cv::Size(-1,-1), cv::TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 20, 0.001 ));
+       calcOpticalFlowPyrLK(ImageGray1, ImageGray2, corners, nextPts, status, err, cv::Size(30,30));
    }
     
    else
    {
-        goodFeaturesToTrack(ImageGray1,  LK_query_kpts,  500,0.001,10);
-        goodFeaturesToTrack(ImageGray2,  LK_train_kpts,  500,0.001,10);
+        goodFeaturesToTrack(ImageGray1,  LK_query_kpts,  600,0.001,5);
+        goodFeaturesToTrack(ImageGray2,  LK_train_kpts,  600,0.001,5);
 
         LK_descriptor = new cv::BriefDescriptorExtractor(16);
 
@@ -223,7 +223,6 @@ void LKFeatures::  LKFeaturesTracking ()
 
         LK_matcher->match(LK_query_desc, LK_train_desc, LK_matche);
 
-           
         for (int i=0; i< (int) LK_matche.size(); i++)
         {
             
@@ -241,8 +240,6 @@ void LKFeatures::  LKFeaturesTracking ()
             
          }
    }
-
-
 }
 void LKFeatures ::  FeaturesMatched  (std::vector<CvPoint2D32f> &match_query, std::vector<CvPoint2D32f> &match_train)
 {

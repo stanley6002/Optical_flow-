@@ -52,7 +52,9 @@ VideoProcessing:: VideoProcessing (int Width , int Height)
      //Image3=  cvCreateImage(cv::Size(Width, Height), IPL_DEPTH_8U, 3);
      //frame=  cvCreateImage(cv::Size(ImgWidth, ImgHeight), IPL_DEPTH_8U, 3);;
      
-     captureNextFrame=FALSE;
+     captureNextFrame =FALSE;
+     captureThirdFrame= FALSE;
+     
 }
 
 IplImage* VideoProcessing :: CaptureInitialFrame(CvCapture* camCapture)
@@ -83,8 +85,8 @@ IplImage* VideoProcessing :: CaptureInitialFrame(CvCapture* camCapture)
         //cout<<"captured second frame"<<endl;
     }
     
-    count_frame= FALSE;
-    captureNextFrame=true;
+        count_frame= FALSE;
+        captureNextFrame=true;
         
     }
 
