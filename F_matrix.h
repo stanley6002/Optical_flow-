@@ -14,17 +14,29 @@
 
 class EpipolarGeometry 
 {
+     friend class CameraPose;
     
+  
 public:
-    
+    enum Function
+    {
+        FivePoints,
+        FundamentalMatrix
+    };
+
     double R_relative[9];
     double t_relative[3];
     double K1matrix[9];
     double K2matrix[9];
     double FocusLength;
+    
     double R1matrix[9];
+    
     double t1matrix[3];
-
+    
+    double Fmatrix[9];
+    
+    
     int num_ofrefined_pts;
     int Ransac_threshold;
     float ApicalAngle;
@@ -44,8 +56,10 @@ public:
     void FindFundamentalMatrix();   // Find the fundamental matrix and push the refinded points
     void MainProcess();
 
-    void FindRelativePose();
+    void FindRelativePose(EpipolarGeometry::Function input);
+    
     void CenterizedFeaturePoint    (v2_t* lrefined_pt, v2_t* rrefined_pt, int num_ofrefined_pts);
+    
     void InitializeIntrinsicMatrix (double* Kmatrix);
     
     void TwoviewTriangulation (vector<v2_t> & left_pts,vector<v2_t> & right_pts, vector<v3_t> & V3Dpts );
@@ -55,9 +69,16 @@ public:
     static float Variance (v3_t* m_3Dpts, const  float depth , const int size_);
     
     void PointRefinement(v3_t* m_3Dpts,vector<v2_t> & left_pts,vector<v2_t> & right_pts, vector<v3_t> & V3Dpts);
+   
     inline int  NumofPts()
         {return( num_ofrefined_pts);}
-
+    
+    
+    inline void PopIntrinsicMatrix(double* Kmatrix)
+    {
+        memcpy(Kmatrix, K1matrix, 9*sizeof(double));    
+    }
+    
     inline bool CheckCheirality(v3_t pt)
     {
         bool Cheirality=false;
@@ -75,7 +96,7 @@ public:
     
     ~ EpipolarGeometry ();
     
-    
+    friend void test();
 private:
     bool TwoviewTria;
     bool skipFrame;
@@ -84,8 +105,10 @@ private:
    
     double Numofpts;
     int essential; // control f _matrix
-    double Fmatrix[9];
+    //double Fmatrix[9];
     static void _3DdepthRefine (v3_t* m_3Dpts, bool* tempvector, int num_ofrefined_pts);
+    bool Use_FivePoints;
+    bool Use_FundamentalMatrix;
     //IplImage* ImageGray1;
     //IplImage* ImageGray2;
     //bool Surf_activate ;

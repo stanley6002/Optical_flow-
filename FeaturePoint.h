@@ -15,73 +15,10 @@
 
 using namespace std;
 
-typedef struct 
-{
-    double n[9];
-    
-}  RotMat;
-
-typedef  struct 
-{
-
-    double n[3];
-    
-} TMat;
-
-class CameraPose
-{
-    friend class FeaturePts;
-public:
-    
-    vector <RotMat> mRmatrix;
-    vector <TMat>   mTmatrix;
-    
-    inline void LoadRotmatrix(double* R )
-    {
-        RotMat tempR;
-        memcpy( tempR.n , R, 9* sizeof(double));
-        mRmatrix.push_back(tempR);
-    }
-    
-    inline void LoadTmatrix(double* T)
-    {
-        TMat tempT;
-        memcpy( tempT.n , T, 3* sizeof(double));
-        mTmatrix.push_back(tempT);
-    }
-    
-    inline void First2viewInitialization(double* R1, double* R_relative, double* T1, double* T_relative)
-    {
-        LoadRotmatrix(R1);
-        LoadRotmatrix(R_relative);
-        
-        LoadTmatrix(T1);
-        LoadTmatrix(T_relative);
-    }
-    
-    inline void PopRotmatrix(int i, double* R)
-    {
-        memcpy(R,mRmatrix[i].n, 9*sizeof(double));
-    }
-    inline void PopTmatrix(int i, double* T)
-    {
-        memcpy(T,mTmatrix[i].n,3*sizeof(double));
-    }
-    
-    void PrintRotmatrix(int i);
-    void PrintTmatrix(int i);
-    
-    //inline void PopRotmatirx(double* R);
-    //inline void PopTmatrix(double* T);
-     CameraPose ();
-    ~CameraPose ();
-    
-};
-
-
 
 class FeaturePts 
 {   
+     friend class CameraPose;
     
 public:
     // temporary storage //
@@ -89,14 +26,17 @@ public:
     vector<v2_t> m_leftPts;  
     vector<v2_t> m_rightPts;
     
+    int NumReproject;
+    int FrameNumber;
+    
     //  Add Frame Sequences at following:
     //
     //  Frame : RIGHT->  LEFT  ->(incoming third view) RIGHT 
     //          First   Second                         Third
     //
-    
-    
-    // Feature Point list (column: frame number across  ; row number: number of points  )     
+    //
+    //
+    //  Feature Point list (column: frame number across  ; row number: number of points  )     
     //  Feature Point List   
     //                                           
     //     p11   p12   p13   three common points                                pnl  
@@ -111,20 +51,19 @@ public:
     //  For example 
     //  add  two new points
     //  
-    //       pn2     pn3
-    //     pn+1 2  pn+1 3 
-    //     three common points                          two common points
-    //     across three consectutive frame          across two consecutive 
-    
-    // temporary storage //
+    //  pn2     pn3
+    //  pn+1 2  pn+1 3 
+    //  three common points                          two common points
+    //  across three consectutive frame          across two consecutive 
+    //  temporary storage //
     
     vector<vector<v2_t> > mv2_location;   // show 2D point locations
     vector<vector<int> >  mv2_frame;      // show frame list 
     
-
-    inline void LoadFeatureList()
+    inline void LoadFeatureList(int FrameNum)
     {
-        int size_= this-> m_leftPts.size(); 
+       
+        int size_= (int) this-> m_leftPts.size(); 
         
         for(int i=0;i< size_;i++)
         {
@@ -132,7 +71,7 @@ public:
             mv2_location[i].push_back(m_leftPts[i]);
             mv2_location[i].push_back(m_rightPts[i]);   
             
-            int Numofview =2;
+            int Numofview = FrameNum;
             
             mv2_frame.push_back(vector<int>());
             for (int j=0;j<Numofview;j++)
@@ -175,6 +114,7 @@ public:
         m_leftPts.insert(m_leftPts.end() , left_pts.begin() , left_pts.end() );
         m_rightPts.insert(m_rightPts.end() , right_pts.begin() , right_pts.end() );
     }
+    
     inline void Loadv3Pts(vector<v3_t>V3Dpts)
     {
         m_3Dpts. insert(m_3Dpts.end(), V3Dpts.begin(), V3Dpts.end());  
@@ -182,7 +122,7 @@ public:
     
     void ConnectedVideoSequence(vector<v2_t> Previous_pts   /*previous frame*/, v2_t* Connected_pts, v2_t* Current /*current new frame*/, int Numpts);
     void CreateFeatureTrack(int* tempCurrent, int ConnectedPtsize, v2_t* Connected_pts, v2_t* Current_pts,int FrameNumber);
-    void CollectProjectPts(int Previous_ptsize , v2_t* Current_pts);
+    void CollectFeatureTrackProjectPts(int Previous_ptsize , v2_t* Current_pts, int FrameNum);
     
     FeaturePts ();
     ~ FeaturePts ();

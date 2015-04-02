@@ -13,7 +13,9 @@
 #include "FFME.h"
 #include "miscul.h"
 #include "OpenglPlot.h"
-#include "FeaturePoint.h"
+//#include "FeaturePoint.h"
+#include "Relative_Pose.h"
+
 
 CvCapture *camCapture;
 
@@ -221,9 +223,10 @@ int main (int argc, const char * argv[])
                     int Focuslength= 280;
                     int Ransac_threshold= 2.0;
                     float MaxAngle =0.065;
+                   
                     EpipolarGeometry EpipolarGeometry(match_query, match_train, size_match, numTrialFmatrix, numTrialRelativePose, Focuslength, Ransac_threshold);  
                     EpipolarGeometry.FindFundamentalMatrix(); 
-                    EpipolarGeometry.FindRelativePose();    
+                    EpipolarGeometry.FindRelativePose(EpipolarGeometry. FivePoints );    
                     EpipolarGeometry.FindApicalAngle(MaxAngle);
                     
                     IplImage* Two_image=EpipolarGeometry.plot_two_imagesf(imgC, imgA);
@@ -247,31 +250,43 @@ int main (int argc, const char * argv[])
                             SkipthisFrame =0; 
                             EpipolarGeometry.InitializeFirstPmatrix();
                             EpipolarGeometry.TwoviewTriangulation(left_pts,right_pts,V3Dpts);
+                            
+                            CameraPose.First2viewInitialization(EpipolarGeometry.R1matrix, EpipolarGeometry.R_relative, EpipolarGeometry.t1matrix, EpipolarGeometry.t_relative);
+                            
                             /*
                             OpenGLPlot. Setview();
                             OpenGLPlot. PlotCamera(EpipolarGeometry.t_relative);
                             OpenGLPlot. PlotVertex(EpipolarGeometry.NumofPts(), V3Dpts);   
                             */
+                            
                             //for (int i=0;i<100;i++)
-                            //    cout<< EpipolarGeometry.rrefined_pt[i].p[0]<<" "<<EpipolarGeometry.rrefined_pt[i].p[1]<<" "<<EpipolarGeometry.lrefined_pt[i].p[0]<<" "<<EpipolarGeometry.lrefined_pt[i].p[1]<<endl;
+                            // cout<< EpipolarGeometry.rrefined_pt[i].p[0]<<" "<<EpipolarGeometry.rrefined_pt[i].p[1]<<" "<<EpipolarGeometry.lrefined_pt[i].p[0]<<" "<<EpipolarGeometry.lrefined_pt[i].p[1]<<endl;
                             
                             FeaturePts.Loadv2Pts(left_pts, right_pts);  // frame: Right-> left -> Right 
                             FeaturePts.Loadv3Pts(V3Dpts); 
                         }
                         else
                         {
-                             FeaturePts.LoadFeatureList();
+                             int FrameNum =2;
+                             FeaturePts.LoadFeatureList(FrameNum);
                              /// Connect feature point and create feature tracks 
+                            
                              FeaturePts.ConnectedVideoSequence(FeaturePts.m_rightPts, EpipolarGeometry.lrefined_pt /*connected pts*/ ,
                                                                EpipolarGeometry.rrefined_pt  /* current pts*/ , EpipolarGeometry.num_ofrefined_pts);
-                           
+                             
+                             //CameraPose.LoadRelativePose(EpipolarGeometry.R_relative, EpipolarGeometry.t_relative);
+                            
+                             CameraPose.Egomotion(EpipolarGeometry, FeaturePts);
+                            
+                            cout<< CameraPose.SizeofPose()<<endl;
+                            cout<< FeaturePts.NumReproject<<endl;
 
-                            break;
+                             break;
                                                       
                         }
                         imgB= cvCloneImage(frame);
                         ThirdFrame= true;
-                    } 
+                    }
                 }
                  firstcapture=0;
             }

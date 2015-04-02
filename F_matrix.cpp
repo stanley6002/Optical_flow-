@@ -12,7 +12,7 @@
 
 using namespace std;
 
-void F_matrix_process (int num_pts, v3_t* r_pt, v3_t* l_pt,double *F, int num_trial, int F_threshold, int essential, matched* refined_pts, int ith_pair)
+void F_matrix_process (int num_pts, v3_t* r_pt, v3_t* l_pt, double *F_final, int num_trial, int F_threshold, int essential, matched* refined_pts, int ith_pair)
 {
     int F_estimated;
    //    int estimate_fmatrix_ransac_matches(int num_pts, v3_t *a_pts, v3_t *b_pts, 
@@ -20,6 +20,7 @@ void F_matrix_process (int num_pts, v3_t* r_pt, v3_t* l_pt,double *F, int num_tr
    //      double success_ratio,
    //      int essential, double *F)
    //double success_ratio;
+    double F[9];
     F_estimated= estimate_fmatrix_ransac_matches(num_pts, r_pt, l_pt, 50, 2.0, 2.0,essential, F); 
    
    //matrix_print(3, 3, F);
@@ -33,7 +34,7 @@ void F_matrix_process (int num_pts, v3_t* r_pt, v3_t* l_pt,double *F, int num_tr
     for (int i=0; i<num_pts;i++)
     {
         double distance = fmatrix_compute_residual(F,r_pt[i],l_pt[i]);
-        if (distance<60)
+        if (distance<40)
         { 
         
         //cout<<distance1<<endl;
@@ -59,7 +60,7 @@ void F_matrix_process (int num_pts, v3_t* r_pt, v3_t* l_pt,double *F, int num_tr
         //cvCircle(IGray1, newmatched, 3, CV_RGB(255,255,255));
         //cvCircle(IGray_l, newmatched, 3, CV_RGB(255,255,255));
     }
-    double F_refine[9];
+    //double F_refine[9];
     //F_estimated= estimate_fmatrix_ransac_matches((int)inliers.size(),r_ptinlier,l_ptinlier, 
     //                                             50, 1 ,1,essential, F_refine); 
     //cout<<"Fundamental_matrix"<<endl;
@@ -91,15 +92,15 @@ void F_matrix_process (int num_pts, v3_t* r_pt, v3_t* l_pt,double *F, int num_tr
        refine_fmatrix_nonlinear_matches((int)inliers.size(), r_ptinlier, l_ptinlier, F0, F); 
     }
     
-    cout<<"nonlinear_fundamental_matrix: "<<endl;
-    matrix_print(3,3,F);
+    //cout<<"nonlinear_fundamental_matrix: "<<endl;
+    //matrix_print(3,3,F);
     vector<int> non_inliers;
     for (int i=0; i<num_pts;i++)
     {
         double distance = fmatrix_compute_residual(F,r_pt[i],l_pt[i]);
         // double distance= fmatrix_compute_distance(F,  r_pt[i],  l_pt[i]); 
       
-        if (distance<60)
+        if (distance<40)
         {
             non_inliers.push_back(i);
             // cout<< l_pt[i].p[0]<<" "<<l_pt[i].p[1]<<" "<<r_pt[i].p[0]<<" "<<r_pt[i].p[1]<<endl;
@@ -122,7 +123,7 @@ void F_matrix_process (int num_pts, v3_t* r_pt, v3_t* l_pt,double *F, int num_tr
     
     }
 
-    //push_backpts(l_ptinlier, r_ptinlier, refined_pts,(int)inliers.size(),ith_pair);
+   
     push_backpts(l_ptinlier_nonlinear, r_ptinlier_nonlinear, refined_pts,(int)non_inliers.size(),ith_pair);
     double error;
     double sum=0;
@@ -131,9 +132,14 @@ void F_matrix_process (int num_pts, v3_t* r_pt, v3_t* l_pt,double *F, int num_tr
         error=fmatrix_compute_residual(F, r_ptinlier[i],l_ptinlier[i]) ;
         sum+=error;
     }
-    //cout<<"nonlinear"<<endl;
-    //cout<<sum/((int)inliers.size())<<endl;
-    //cout<<endl;
+    
+    memcpy(F_final,F,9*sizeof(double));
+    
+    delete []  l_ptinlier_nonlinear;
+    delete []  r_ptinlier_nonlinear;
+    delete []  l_ptinlier;
+    delete []  r_ptinlier;
+        
 }
 
 
@@ -559,40 +565,150 @@ EpipolarGeometry::EpipolarGeometry(const std::vector<CvPoint2D32f> match_query ,
 void EpipolarGeometry::MainProcess()
 {
 
-    FindFundamentalMatrix();
-    FindRelativePose();
+    //FindFundamentalMatrix();
+    //FindRelativePose();
 
 }
-void EpipolarGeometry::FindRelativePose()
+void EpipolarGeometry::FindRelativePose(EpipolarGeometry:: Function input)
 {
     //int Ransac_rounds = 200; 
     //double Ransac_threshold= 2 ;
     
-    double R_out[9];
-    double t_out[3];
-    double camera2t[3];
-    
-    CenterizedFeaturePoint(lrefined_pt,rrefined_pt, num_ofrefined_pts);
-    
-    //double K1matrix[9];
-    //double K2matrix[9];
-    
-    InitializeIntrinsicMatrix(K1matrix);
-    InitializeIntrinsicMatrix(K2matrix); 
-    
-    //matrix_print(3,3,K1matrix);
-    //matrix_print(3,3,K2matrix);
-    
-    int numinliers = compute_pose_ransac(num_ofrefined_pts, lrefined_pt, rrefined_pt, K1matrix, K2matrix, Ransac_threshold, num_trial_relativepose , R_out ,t_out);
-    
-    cout<<"Number of inliers " <<numinliers<<endl;
-    matrix_transpose_product(3, 3, 3, 1, R_out, t_out , camera2t);
-    matrix_scale(3, 1, camera2t, -1.0, t_out);
-    matrix_print(3,1,t_out); 
+    if(input == FivePoints)
+    {
+        Use_FivePoints= true;
+    }
+    else
+    {
+        Use_FivePoints= false;
+    }    
    
-    memcpy(R_relative, R_out, 9*sizeof(double));
-    memcpy(t_relative, t_out, 3*sizeof(double)); 
+    if(Use_FivePoints)
+    {
+        double R_out[9];
+        double t_out[3];
+        double camera2t[3];
+        
+        CenterizedFeaturePoint(lrefined_pt,rrefined_pt, num_ofrefined_pts);
+        
+        //double K1matrix[9];
+        //double K2matrix[9];
+        
+        InitializeIntrinsicMatrix(K1matrix);
+        InitializeIntrinsicMatrix(K2matrix); 
+        
+        //matrix_print(3,3,K1matrix);
+        //matrix_print(3,3,K2matrix);
+        
+        int numinliers = compute_pose_ransac(num_ofrefined_pts, lrefined_pt, rrefined_pt, K1matrix, K2matrix, Ransac_threshold, num_trial_relativepose , R_out ,t_out);
+        
+        cout<<"Number of inliers " <<numinliers<<endl;
+        matrix_transpose_product(3, 3, 3, 1, R_out, t_out , camera2t);
+        matrix_scale(3, 1, camera2t, -1.0, t_out);
+        matrix_print(3,3,R_out);
+        matrix_print(3,1,t_out); 
+        
+        memcpy(R_relative, R_out, 9*sizeof(double));
+        memcpy(t_relative, t_out, 3*sizeof(double)); 
+    }
     
+    if(! Use_FivePoints)
+    {
+        InitializeIntrinsicMatrix(K1matrix);
+        InitializeIntrinsicMatrix(K2matrix); 
+        
+        CenterizedFeaturePoint(lrefined_pt,rrefined_pt, num_ofrefined_pts);
+        v2_t* r_pts_norm = new v2_t[num_ofrefined_pts];
+        v2_t* l_pts_norm = new v2_t[num_ofrefined_pts]; 
+        
+        double K1_inv[9];
+        double K2_inv[9];
+        
+        matrix_invert(3, K1matrix, K1_inv);
+        matrix_invert(3, K2matrix, K2_inv);
+        
+        bool* IndexStack= new bool [num_ofrefined_pts];
+//      int NumIndex=0;
+//        for(int i=0;i< num_ofrefined_pts;i++)
+//        {
+//            v3_t l_pt=  { Vx(lrefined_pt[i]), Vy(lrefined_pt[i]), 1.0 };
+//            v3_t r_pt=  { Vx(lrefined_pt[i]), Vy(lrefined_pt[i]), 1.0 };
+//            
+//            double distance = fmatrix_compute_residual(Fmatrix,r_pt,l_pt);
+//             if (distance<10)
+//             {
+//                 IndexStack[i]= true;
+//                 NumIndex++;
+//             }
+//        }
+//        
+//        v2_t* r_pts_norm = new v2_t[NumIndex];
+//        v2_t* l_pts_norm = new v2_t[NumIndex]; 
+//        int shift =0;
+//        for (int i=0;i< num_ofrefined_pts;i++)
+//        {
+//           // if (IndexStack[i])
+//           // {
+//             
+//                double r[3] = { Vx(rrefined_pt[i]), Vy(rrefined_pt[i]), 1.0 };
+//                double l[3] = { Vx(lrefined_pt[i]), Vy(lrefined_pt[i]), 1.0 };
+//                
+//                double r_norm[3], l_norm[3];
+//                
+//                matrix_product331(K1_inv, r, r_norm);
+//                matrix_product331(K2_inv, l, l_norm);
+//                
+//                r_pts_norm[i] = v2_new(-r_norm[0], -r_norm[1]);
+//                l_pts_norm[i] = v2_new(-l_norm[0], -l_norm[1]);
+//            
+//            //    shift++;
+//            //}
+//        }
+        
+
+        for (int i = 0; i < num_ofrefined_pts; i++) 
+        {
+            double r[3] = { Vx(rrefined_pt[i]), Vy(rrefined_pt[i]), 1.0 };
+            double l[3] = { Vx(lrefined_pt[i]), Vy(lrefined_pt[i]), 1.0 };
+            
+            double r_norm[3], l_norm[3];
+            
+            matrix_product331(K1_inv, r, r_norm);
+            matrix_product331(K2_inv, l, l_norm);
+            
+            r_pts_norm[i] = v2_new(-r_norm[0], -r_norm[1]);
+            l_pts_norm[i] = v2_new(-l_norm[0], -l_norm[1]);
+            //r_pts_norm[i] = v2_new(r_norm[0], r_norm[1]);
+            //l_pts_norm[i] = v2_new(l_norm[0], l_norm[1]);
+        }
+        
+        double tmp[9];
+        double EssentialMatrix[9];
+        
+        matrix_transpose_product(3, 3, 3, 3, K2matrix, Fmatrix, tmp);
+        matrix_product(3, 3, 3, 3, tmp, K1matrix, EssentialMatrix);
+
+        double Rmatrix[9];
+        double Tmatrix[3];
+        double camera2t[3];
+
+        find_extrinsics_essential_multipt(EssentialMatrix, num_ofrefined_pts , r_pts_norm, l_pts_norm , Rmatrix, Tmatrix);
+       
+        //matrix_print(3,3,Rmatrix);
+       
+        matrix_print(3,1,Tmatrix);
+        
+        matrix_transpose_product(3, 3, 3, 1, Rmatrix, Tmatrix , camera2t);
+        matrix_scale(3, 1, camera2t, -1.0, Tmatrix);
+        
+        memcpy(R_relative, Rmatrix, 9*sizeof(double));
+        memcpy(t_relative, Tmatrix, 3*sizeof(double)); 
+        //cout<<""<<endl;
+        delete [] r_pts_norm;
+        delete [] l_pts_norm;
+        delete [] IndexStack;
+    
+    }
 }
 void EpipolarGeometry::CenterizedFeaturePoint (v2_t* lrefined_pt, v2_t* rrefined_pt, int num_ofrefined_pts)
 {
@@ -618,9 +734,11 @@ void EpipolarGeometry::FindFundamentalMatrix()
 
     matched * refined_pts= new matched[1]; 
     
-    double F[9];
+    //double F[9];
 
-    F_matrix_process (this->Numofpts,  r_pt, l_pt, F, this->num_trial_Fmatrix, 10 ,  this->essential, refined_pts, 0);
+    F_matrix_process (this->Numofpts,  r_pt, l_pt, this-> Fmatrix , this->num_trial_Fmatrix, 10 ,  this->essential, refined_pts, 0);
+    
+    
     
     num_ofrefined_pts =(int)refined_pts[0].R_pts.size();
     
@@ -628,6 +746,9 @@ void EpipolarGeometry::FindFundamentalMatrix()
     rrefined_pt= new v2_t[num_ofrefined_pts];
     
     pop_backpts_WI(lrefined_pt,rrefined_pt,refined_pts,0);
+    
+    cout<<"Nonlinear_Fundamental_matrix"<<endl;
+    matrix_print(3,3, Fmatrix);
      
     delete [] refined_pts;
 }
