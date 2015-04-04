@@ -31,77 +31,7 @@ IplImage* plot_two_imagesf(IplImage *IGray, IplImage *IGray1, CvPoint *corners1,
 
 using namespace cv;
 using namespace std;
-
-
 # define PlotFeatureTracking
-void _3DPtsRefinement (const v2_t* nextPtsv2, const v2_t*cornersv2, v3_t*_3DPts, const int NumofPts,  vector< v2_t > & nextPtsvRefined , vector< v2_t > &cornersvRefined, vector <v3_t> &_3DPtsRefined )
-{
-    int tempvector[NumofPts];
-    memset(tempvector,0, sizeof(tempvector) );
-    int tempNumPts= NumofPts;
-    
-    for(int i=0;i<NumofPts;i++) 
-    {
-         if( _3DPts[i].p[2] >=0)
-         {
-               tempvector[i]=1;
-               tempNumPts-=1;
-                
-         }  
-     }
-    
-    for (int i=0;i<NumofPts;i++) 
-    {
-       if ( tempvector[i]==0 )
-       {
-           nextPtsvRefined.push_back(nextPtsv2[i]);
-           cornersvRefined.push_back(cornersv2[i]);
-           _3DPtsRefined.push_back(_3DPts[i]);
-       }
-    }
-  
-    cout<< "numberofPts"<< NumofPts<<endl;
-    cout<<"size "<< nextPtsvRefined.size()<<" "<<cornersvRefined.size()<<" "<<_3DPtsRefined.size()<<endl;
-
-
-}
-
-void RefindMatchedPts(vector<Point2f>& corners , vector<Point2f>& NestPts, int ImgWidth ,int ImgHeight)
-{
-    int Size_= (int) corners.size();
-    
-    vector<Point2f> Tempcorner;
-    vector<Point2f> TempNestPts;    
-    
-    for (int i =0; i<Size_;i++)
-    {
-        if (corners[i].x >5 && NestPts[i].x > 5)
-        {
-            if (corners[i].x < ImgWidth-5 && NestPts[i].x< ImgWidth-5 )
-             {
-                if (corners[i].y> 5 && NestPts[i].y >5)
-                {
-                    if (corners[i].y< ImgHeight-5 && NestPts[i].y< ImgHeight-5)
-                    {
-                        
-                        Tempcorner.push_back(corners[i]);
-                        TempNestPts.push_back(NestPts[i]);
-                    }
-               }
-            }
-            
-        }
-    }
-    
-    corners.clear();
-    NestPts.clear();
-     
-    corners = Tempcorner;
-    NestPts = TempNestPts;
-    
-    //cout<<"after "<<(int)corners.size()<<endl;
-
-}
 int main (int argc, const char * argv[])
 {
 
@@ -149,6 +79,7 @@ int main (int argc, const char * argv[])
     VideoProcessing VideoProcessing (Img_width, Img_height); 
    
     OpenGLPlot OpenGLPlot (Img_width*2, Img_height*2);
+    OpenGLPlot. Setview();
     
     CameraPose CameraPose;
     
@@ -225,6 +156,7 @@ int main (int argc, const char * argv[])
                     float MaxAngle =0.065;
                    
                     EpipolarGeometry EpipolarGeometry(match_query, match_train, size_match, numTrialFmatrix, numTrialRelativePose, Focuslength, Ransac_threshold);  
+                    
                     EpipolarGeometry.FindFundamentalMatrix(); 
                     EpipolarGeometry.FindRelativePose(EpipolarGeometry. FivePoints );    
                     EpipolarGeometry.FindApicalAngle(MaxAngle);
@@ -241,49 +173,62 @@ int main (int argc, const char * argv[])
                     }
                     else
                     {
+                        vector<v3_t> V3Dpts1;
                         if(! ThirdFrame)
                         {
                             vector<v2_t> left_pts;
                             vector<v2_t> right_pts;
                             vector<v3_t> V3Dpts;    
                             
+
                             SkipthisFrame =0; 
                             EpipolarGeometry.InitializeFirstPmatrix();
                             EpipolarGeometry.TwoviewTriangulation(left_pts,right_pts,V3Dpts);
+                           
+                            CameraPose.InitializeFirstTwoKMatrix(EpipolarGeometry.K1matrix, EpipolarGeometry.K2matrix);
                             
                             CameraPose.First2viewInitialization(EpipolarGeometry.R1matrix, EpipolarGeometry.R_relative, EpipolarGeometry.t1matrix, EpipolarGeometry.t_relative);
-                            
-                            /*
-                            OpenGLPlot. Setview();
+                          
                             OpenGLPlot. PlotCamera(EpipolarGeometry.t_relative);
                             OpenGLPlot. PlotVertex(EpipolarGeometry.NumofPts(), V3Dpts);   
-                            */
-                            
+                                                        
                             //for (int i=0;i<100;i++)
                             // cout<< EpipolarGeometry.rrefined_pt[i].p[0]<<" "<<EpipolarGeometry.rrefined_pt[i].p[1]<<" "<<EpipolarGeometry.lrefined_pt[i].p[0]<<" "<<EpipolarGeometry.lrefined_pt[i].p[1]<<endl;
                             
-                            FeaturePts.Loadv2Pts(left_pts, right_pts);  // frame: Right-> left -> Right 
+                            FeaturePts.Loadv2Pts( left_pts, right_pts);  
+                            
+                            // frame: Right-> left -> Right 
                             FeaturePts.Loadv3Pts(V3Dpts); 
                         }
                         else
                         {
-                             int FrameNum =2;
-                             FeaturePts.LoadFeatureList(FrameNum);
-                             /// Connect feature point and create feature tracks 
-                            
-                             FeaturePts.ConnectedVideoSequence(FeaturePts.m_rightPts, EpipolarGeometry.lrefined_pt /*connected pts*/ ,
-                                                               EpipolarGeometry.rrefined_pt  /* current pts*/ , EpipolarGeometry.num_ofrefined_pts);
                              
-                             //CameraPose.LoadRelativePose(EpipolarGeometry.R_relative, EpipolarGeometry.t_relative);
+                            CameraPose. InitializeKMatrix(Focuslength);
+                            int FrameNum =2;
+                            FeaturePts.LoadFeatureList(FrameNum);
+                             
+                            // Connect feature point and create feature tracks 
                             
-                             CameraPose.Egomotion(EpipolarGeometry, FeaturePts);
+                            FeaturePts.ConnectedVideoSequence(FeaturePts.m_rightPts, EpipolarGeometry.lrefined_pt /*connected pts*/ , EpipolarGeometry.rrefined_pt  /* current pts*/ , EpipolarGeometry.num_ofrefined_pts);
+                             
+                            CameraPose.Egomotion(EpipolarGeometry, FeaturePts);
+                            
+                            double T[3];
+                            memcpy(T, CameraPose.mTcMatrix[FrameNum].n,3*sizeof(double));
+                            matrix_print(3,1,T);
+                           
+                            OpenGLPlot. Setview();
+                            OpenGLPlot. PlotCamera(T);
+                            
+                            //OpenGLPlot. PlotVertex(EpipolarGeometry.NumofPts(), V3Dpts); 
                             
                             cout<< CameraPose.SizeofPose()<<endl;
                             cout<< FeaturePts.NumReproject<<endl;
 
-                             break;
+                            break;
                                                       
                         }
+                        
                         imgB= cvCloneImage(frame);
                         ThirdFrame= true;
                     }

@@ -37,7 +37,7 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
     memcpy(R_relative,EG.R_relative, 9* sizeof(double));
     memcpy(T_relative,EG.t_relative, 3* sizeof(double));
     
-    int size_= SizeofPose();  
+    //int FrameNumber= SizeofPose()-1;  
     
     double *Rpre= new double[9];
     double *Tpre= new double[3];
@@ -45,7 +45,7 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
     //double *Rcurrent = new double[9];
     //double *Tcurrent = new double[3];
     
-    double *fin_t = new double[3];
+    double fin_t[3];
     
     double updated_rotation[9];
     double updated_t[3];
@@ -64,47 +64,46 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
     //   t3=-R23'*R12'*t12-R23'*t23
     //
     
-    PopRotcMatrix(size_-1, Rpre);   // load previous 
-    PopTcMatrix(size_-1,Tpre);
+    PopRotcMatrix((int) mRcMatrix.size()-1, Rpre);   // load previous 
+    PopTcMatrix( (int) mTcMatrix.size()-1,Tpre);
      
-    matrix_product33(R_relative, Rpre, updated_rotation);                 // RotCurrent * RotPrevious // 
-    matrix_transpose_product(3, 3, 3, 1, R_relative, Tpre , fin_t);       // ( update  -Ri'*Center of previsous frame )
+    matrix_product33(R_relative, Rpre, updated_rotation);           // RotCurrent * RotPrevious // 
+    matrix_transpose_product(3, 3, 3, 1, R_relative, Tpre , fin_t); // ( update  -Ri'*Center of previsous frame )
     
     updated_t[0]=fin_t[0]+T_relative[0];  // add to -(Rij)'*tij
     updated_t[1]=fin_t[1]+T_relative[1];
     updated_t[2]=fin_t[2]+T_relative[2];
     
-    
-    int NumofReproject = FeaturePts.NumReproject;
-    
-    TwoDalighment( NumofReproject, updated_rotation , updated_t , FeaturePts.mv3ProjectionPts, FeaturePts.mv2ReprojectPts ,EG);
-
-    
-    PrintTmatrix(1);
+    cout<<"egomotion"<<endl;
     cout<<updated_t[0]<<" "<<updated_t[1]<<" "<<updated_t[2]<<endl;
-
+   
+    int NumofReproject = FeaturePts.NumReproject;
+    double Tc_updated[3];
+    
+//    TwoDalighment(NumofReproject, updated_rotation , updated_t , FeaturePts.mv3ProjectionPts, FeaturePts.mv2ReprojectPts ,EG , Tc_updated);
+//    
+//    cout<<"2d alightment"<<endl;
+//    matrix_print(3,1,Tc_updated);
+//    
+//    // update new camera pose //
+      LoadTcMatrix(updated_t);
+      LoadRotcMatrix(updated_rotation);
+    
+    
+    
     
 
 }
  void  CameraPose:: TwoDalighment(int NumofReproject , double*Rot, double*trans, vector<v3_t> P__3DSolvedforparameters, 
-                                vector<v2_t> P__2DSolvedforparameters, EpipolarGeometry EG)
+                                vector<v2_t> P__2DSolvedforparameters, EpipolarGeometry EG, double* Tcmatrix)
 {
     
 # define _2d_aligh 2
     
     double* Kmatrix = new double [9];
-    EG.PopIntrinsicMatrix(Kmatrix);
     
-//    v3_t* pt= new v3_t[(int)_2dalighment.size()];
-//    v3_t* delta = new v3_t[(int)_2dalighment.size()];
-//    
-//    v3_t* delta_vector = new v3_t [(int)_2dalighment.size()]; 
-//    
-//    GetIntrinsics(K1,numimagej-2);  
-//    GetIntrinsics(K2,numimagej-1); 
-   
-   
-    
+    PopKMattix((int) KMatrix.size()-1, Kmatrix) ;  
+
     v3_t *_3Dpt = new v3_t [NumofReproject];
     v2_t *_2Dpt = new v2_t [NumofReproject];
 
@@ -117,7 +116,6 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
     memcpy(Rott, Rot, 9*sizeof(double));
     memcpy(Tt, trans, 3*sizeof(double));
     
-        
     matrix_product(3, 3, 3, 1, Rott, Tt, R_t);
     
     for(int i=0;i<NumofReproject;i++)
@@ -130,188 +128,183 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
         
       matrix_product(3, 3, 3, 1, Rott, X3D, q);
         
-      q[0] -=R_t[0]; q[1] -=R_t[1]; q[2] -=R_t[2]; 
+      q[0]-=R_t[0]; q[1]-=R_t[1]; q[2]-=R_t[2];    
       
       _3Dpt[i].p[0]=q[0]; _3Dpt[i].p[1]=q[1]; _3Dpt[i].p[2]=q[2];
         
       _2Dpt[i].p[0]= P__2DSolvedforparameters[i].p[0]/Kmatrix[0]; 
       _2Dpt[i].p[1]= P__2DSolvedforparameters[i].p[1]/Kmatrix[4]; 
+        
+      //cout<<  _3Dpt[i].p[0]<<" "<< _3Dpt[i].p[1]<<" "<< _3Dpt[i].p[2]<<endl;
+      //cout<<  _2Dpt[i].p[0]<<" "<<_2Dpt[i].p[1]<<endl;
     }
     
     double Parameter_vec[3];
     
-    //DeltaVector_Ransac(_2Dpt, _3Dpt, size_, Parameter_vec,   2000, 0.1);
-    
-    //DeltaVector_Ransac(_2Dpt, _3Dpt, size_, Parameter_vec, 1000, 0.1);
+    DeltaVector_Ransac( _2Dpt, _3Dpt, NumofReproject , Parameter_vec, 30 , 0.1);
     
     matrix_transpose(3, 3, Rott, Rott_transpose);
     matrix_product331(Rott_transpose,Parameter_vec , R_t_T);
-    
-    //cout<<"Update_vector"<<endl;
-    //cout<<Tt[0]+ R_t_T[0]<<" "<< Tt[1]+ R_t_T[1]<<" "<<Tt[2]+ R_t_T[2]<<endl;
-    //cout<<endl;
-    
+        
     trans[0]= Tt[0]+ R_t_T[0];
     trans[1]= Tt[1]+ R_t_T[1];
     trans[2]= Tt[2]+ R_t_T[2];
     
-    
+    memcpy(Tcmatrix, trans, 3*sizeof(double));
+    //cout<<"alightment result"<<endl;
+
     free(_3Dpt); free(_2Dpt);
     
 }
 
-//void   DeltaVector_Ransac(v2_t* _2Dpt,v3_t* _3Dpt, int size_ , double *Parameter_vec, int Ransac_runs, double error)
-//{
-//   
-//# define  MIN_NUM_PT 3
-//    
-//    double Minerror=  999999;
-//    double Parameter_vec_temp_ransac[3];
-//    double Parameter_vec_temp[3];
-//    for (int round = 0; round < Ransac_runs; round++) 
-//    {
-//        int support[MIN_NUM_PT];
-//        int i, j;
-//        
-//        v2_t _pts_2D[MIN_NUM_PT];
-//        v3_t _pts_3D[MIN_NUM_PT];
-//        
-//        //double Rtmp[9];
-//        
-//        for (i = 0; i < MIN_NUM_PT; i++) 
-//        {
-//            /* Select an index from 0 to n-1 */
-//            int idx, reselect;
-//            do {
-//                reselect = 0;
-//                idx = rand() % size_;
-//                for (j = 0; j < i; j++) 
-//                {
-//                    if (support[j] == idx)
-//                    {
-//                        reselect = 1;
-//                        break;
-//                    }
-//                }
-//            } 
-//            while (reselect);
-//            
-//            support[i] = idx;
-//            
-//            _pts_3D[i] = _3Dpt[idx];
-//            _pts_2D[i] = _2Dpt[idx];
-//            
-//            
-//        }  
-//        
-//        /* Find out 3D point delta vector* Lef-> right */
-//        
-//        deltavector(_pts_2D, _pts_3D, Parameter_vec_temp);
-//        
-//        double Error_2Ddis=0;
-//        
-//        for (int i=0;i<size_;i++)
-//        {
-//            
-//            Error_2Ddis+= Euclidence_3D(_2Dpt[i],_3Dpt[i],Parameter_vec_temp);
-//        }
-//        
-//        //cout<<"ransac_ "<<endl;
-//        //matrix_print(3,1,Parameter_vec_temp);
-//        //cout<<"error "<<Error_2Ddis<<endl;
-//        
-//        if (Minerror>Error_2Ddis)
-//        {
-//            Minerror= Error_2Ddis;
-//            Parameter_vec_temp_ransac[0] = Parameter_vec_temp[0];
-//            Parameter_vec_temp_ransac[1] = Parameter_vec_temp[1];
-//            Parameter_vec_temp_ransac[2] = Parameter_vec_temp[2];
-//            
-//        }
-//        
-//        
-//    }
-//    
-//    cout<<"parameters_best_ransac :"<<Parameter_vec_temp_ransac[0]<<" "<<Parameter_vec_temp_ransac[1]<<" "<<Parameter_vec_temp_ransac[2]<<" minimum error "<<Minerror<<endl;
-//    
-//    ///  edit 
-//    Parameter_vec[0]= Parameter_vec_temp_ransac[0];
-//    Parameter_vec[1]= Parameter_vec_temp_ransac[1];
-//    Parameter_vec[2]= Parameter_vec_temp_ransac[2];
-//    
-//    
-//    
-//}
+void  CameraPose:: DeltaVector_Ransac(v2_t* _2Dpt, v3_t* _3Dpt, int size_ , double *Parameter_vec, int Ransac_runs, double error)
+{
+   
+# define  MIN_NUM_PT 3
+    
+    double Minerror=  999999;
+    double Parameter_vec_temp_ransac[3];
+    double Parameter_vec_temp[3];
+    
+    for (int round = 0; round < Ransac_runs; round++) 
+    {
+        int support[MIN_NUM_PT];
+        int i, j;
+        
+        v2_t _pts_2D[MIN_NUM_PT];
+        v3_t _pts_3D[MIN_NUM_PT];
+        
+        //double Rtmp[9];
+        int repeat = 0; 
+        for (i = 0; i < MIN_NUM_PT; i++) 
+        {
+            /* Select an index from 0 to n-1 */
+            int idx, reselect;
+            do {
+                reselect = 0;
+                idx = rand() % size_;
+                for (j = 0; j < i; j++) 
+                {
+                    if (support[j] == idx)
+                    {
+                        reselect = 1;
+                        break;
+                    }
+                }
+                 repeat++;
+                if(repeat==500)
+                {
+                    cout<<" not enough points"<<endl;
+                    break;
+                }
+                    
+            } 
+            while (reselect);
+            
+            support[i] = idx;
+            
+            _pts_3D[i] = _3Dpt[idx];
+            _pts_2D[i] = _2Dpt[idx];
+        }  
+        
+        /* Find out 3D point delta vector* Lef-> right */
+        
+        deltavector(_pts_2D, _pts_3D, Parameter_vec_temp);
+       // matrix_print(3,1, Parameter_vec_temp);
+        
+        double Error_2Ddis=0;
+        
+        for (int i=0;i<size_;i++)
+        {
+            
+            Error_2Ddis +=  Euclidence_3D(_2Dpt[i],_3Dpt[i],Parameter_vec_temp);
+        }
+        
+        //cout<<"ransac_ "<<endl;
+        //matrix_print(3,1,Parameter_vec_temp);
+        //cout<<"error "<<Error_2Ddis<<endl;
+        
+        if (Minerror>Error_2Ddis)
+        {
+            Minerror= Error_2Ddis;
+            
+            Parameter_vec_temp_ransac[0] = Parameter_vec_temp[0];
+            Parameter_vec_temp_ransac[1] = Parameter_vec_temp[1];
+            Parameter_vec_temp_ransac[2] = Parameter_vec_temp[2];
+            
+        }
+        
+        
+    }
+    
+    //cout<<"parameters_best_ransac :"<<Parameter_vec_temp_ransac[0]<<" "<<Parameter_vec_temp_ransac[1]<<" "<<Parameter_vec_temp_ransac[2]<<" minimum error "<<Minerror<<endl;
+    //  edit 
+    
+    Parameter_vec[0]= Parameter_vec_temp_ransac[0];
+    Parameter_vec[1]= Parameter_vec_temp_ransac[1];
+    Parameter_vec[2]= Parameter_vec_temp_ransac[2];
+    
+    //cout<<"minimum error " <<Minerror<<endl;
+    
+}
 
 
-//double Euclidence_3D (v2_t _2Dpt, v3_t _3Dpt, double* Parameter_vec)
-//{
-//    double *temp= new double [3];  
-//    double *result= new double[2];
-//    double error;
-//    
-//    temp[0]= _3Dpt.p[0]-Parameter_vec[0];
-//    temp[1]= _3Dpt.p[1]-Parameter_vec[1];
-//    temp[2]= _3Dpt.p[2]-Parameter_vec[2];
-//    
-//    result[0]=_2Dpt.p[0]-(-temp[0]/temp[2]);
-//    result[1]=_2Dpt.p[1]-(-temp[1]/temp[2]);
-//    
-//    error= sqrt((result[0]*result[0])+(result[1]*result[1]));
-//    
-//    free(temp); free(result);
-//    
-//    return(error);
-//}
+double CameraPose :: Euclidence_3D (v2_t _2Dpt, v3_t _3Dpt, double* Parameter_vec)
+{
+    double *temp= new double [3];  
+    double *result= new double[2];
+    double error;
+    
+    temp[0]= _3Dpt.p[0]-Parameter_vec[0];
+    temp[1]= _3Dpt.p[1]-Parameter_vec[1];
+    temp[2]= _3Dpt.p[2]-Parameter_vec[2];
+    
+    result[0]=_2Dpt.p[0]-(-temp[0]/temp[2]);
+    result[1]=_2Dpt.p[1]-(-temp[1]/temp[2]);
+    
+    error= sqrt((result[0]*result[0])+(result[1]*result[1]));
+    
+    free(temp); free(result);
+    
+    return(error);
+}
 
-//void deltavector(v2_t* _2Dpt,  v3_t* _3Dpt, double* Parametrvec_)
-//{
-//    
-//    //double A[18];    double B[6];  
-//    //double ATA[9];  double AT[18]; double INVATA[9];
-//    //double INVATAAt[18]; 
-//    double* A=  new double [18];
-//    double* B = new double[6];
-//    double* ATA = new double [9]; 
-//    double* AT = new double[18];
-//    double* INVATA = new double [9]; 
-//    double* INVATAAt= new double[18];
-//    //double Temp_parameter[4];
-//    
-//    ///  edit A matrix ;
-//    
-//    A[0]  = -1.0 ;           A[1] = 0.0;            A[2] =  -(_2Dpt[0].p[0]);    
-//    A[3]  = -1.0 ;           A[4] = 0.0;            A[5] =  -(_2Dpt[1].p[0]);     
-//    A[6]  = -1.0 ;           A[7] = 0.0;            A[8] =  -(_2Dpt[2].p[0]);    
-//    A[9]  = 0.0;             A[10] = -1.0;          A[11] = -(_2Dpt[0].p[1]);    
-//    A[12] = 0.0;             A[13] = -1.0;          A[14] = -(_2Dpt[1].p[1]);   
-//    A[15] = 0.0;             A[16] = -1.0;          A[17] = -(_2Dpt[2].p[1]);    
-//    
-//    
-//    B[0]= -((_3Dpt[0].p[2]*_2Dpt[0].p[0])+_3Dpt[0].p[0]);
-//    B[1]= -((_3Dpt[1].p[2]*_2Dpt[1].p[0])+_3Dpt[1].p[0]);
-//    B[2]= -((_3Dpt[2].p[2]*_2Dpt[2].p[0])+_3Dpt[2].p[0]);
-//    B[3]= -((_3Dpt[0].p[2]*_2Dpt[0].p[1])+_3Dpt[0].p[1]);
-//    B[4]= -((_3Dpt[1].p[2]*_2Dpt[1].p[1])+_3Dpt[1].p[1]);
-//    B[5]= -((_3Dpt[2].p[2]*_2Dpt[2].p[1])+_3Dpt[2].p[1]);
-//    
-//    
-//    //matrix_print(6,3,A);
-//    
-//    //matrix_print(6,1,B);
-//    
-//    matrix_transpose(6, 3, A, AT);
-//    
-//    matrix_product(3, 6, 6, 3, AT, A, ATA);
-//    
-//    matrix_invert(3, ATA, INVATA);
-//    
-//    matrix_product(3, 3, 3, 6, INVATA, AT, INVATAAt);
-//    
-//    matrix_product(3, 6, 6, 1, INVATAAt, B, Parametrvec_);
-//    
-//    free(A); free(B); free(ATA); free(AT);free(INVATA); free(INVATAAt);
-//    
-//}
+void CameraPose:: deltavector(v2_t* _2Dpt,  v3_t* _3Dpt, double* Parametrvec_)
+{
+    double* A=  new double [18];
+    double* B = new double[6];
+    double* ATA = new double [9]; 
+    double* AT = new double[18];
+    double* INVATA = new double [9]; 
+    double* INVATAAt= new double[18];
+    
+    A[0]  = -1.0 ;           A[1] = 0.0;            A[2] =  -(_2Dpt[0].p[0]);    
+    A[3]  = -1.0 ;           A[4] = 0.0;            A[5] =  -(_2Dpt[1].p[0]);     
+    A[6]  = -1.0 ;           A[7] = 0.0;            A[8] =  -(_2Dpt[2].p[0]);    
+    A[9]  = 0.0;             A[10] = -1.0;          A[11] = -(_2Dpt[0].p[1]);    
+    A[12] = 0.0;             A[13] = -1.0;          A[14] = -(_2Dpt[1].p[1]);   
+    A[15] = 0.0;             A[16] = -1.0;          A[17] = -(_2Dpt[2].p[1]);    
+    
+    
+    B[0]= -((_3Dpt[0].p[2]*_2Dpt[0].p[0])+_3Dpt[0].p[0]);
+    B[1]= -((_3Dpt[1].p[2]*_2Dpt[1].p[0])+_3Dpt[1].p[0]);
+    B[2]= -((_3Dpt[2].p[2]*_2Dpt[2].p[0])+_3Dpt[2].p[0]);
+    B[3]= -((_3Dpt[0].p[2]*_2Dpt[0].p[1])+_3Dpt[0].p[1]);
+    B[4]= -((_3Dpt[1].p[2]*_2Dpt[1].p[1])+_3Dpt[1].p[1]);
+    B[5]= -((_3Dpt[2].p[2]*_2Dpt[2].p[1])+_3Dpt[2].p[1]);
+    
+    matrix_transpose(6, 3, A, AT);
+    
+    matrix_product(3, 6, 6, 3, AT, A, ATA);
+    
+    matrix_invert(3, ATA, INVATA);
+    
+    matrix_product(3, 3, 3, 6, INVATA, AT, INVATAAt);
+    
+    matrix_product(3, 6, 6, 1, INVATAAt, B, Parametrvec_);
+    
+    free(A); free(B); free(ATA); free(AT);free(INVATA); free(INVATAAt);
+    
+}
 
 
