@@ -7,6 +7,41 @@
 //
 
 #include "Relative_Pose.h"
+#include "CameraPoseRefinement.h"
+
+double CameraPose:: CameraReprojectError(int NumPts, double *R, double* Tc, vector<v3_t> Pts,vector<v2_t> Projpts, double * Kmatrix)
+{
+    
+   
+    double error =0;
+    for(int i  =0;i< NumPts;i++)
+    {
+     double b2[3];  
+     double b_cam[3];
+     double b_proj[3];
+     double xij[2];   
+    //K*[R|-Rtc]X//
+    //K*R*[X-tc] //
+    
+    b2[0] = Pts[i].p[0] - Tc[0];
+    b2[1] = Pts[i].p[1] - Tc[1];
+    b2[2] = Pts[i].p[2] - Tc[2];
+    
+    matrix_product331(R, b2, b_cam);  
+    
+    matrix_product331(Kmatrix, b_cam, b_proj);
+    
+    xij[0] = -b_proj[0] / b_proj[2];
+    xij[1] = -b_proj[1] / b_proj[2];
+    
+    double dx = Vx(Projpts[i]) - xij[0];
+    double dy = Vy(Projpts[i]) - xij[1];
+     error += sqrt(dx * dx + dy * dy);
+    }
+    return(error);
+}
+
+
 
 CameraPose::CameraPose()
 {
@@ -29,6 +64,20 @@ void CameraPose::PrintTmatrix(int i)
     matrix_print(3,1,tempT);
 }
 
+/* t1                = R12*t2+t12 */
+// Previous camera         Current            relative 
+//   center          =   camera rotation   +    
+//                           matrix           translation
+
+// Update process 
+/*   Center of t2   */
+//   t2= -(R12)'*t12
+//   Frame 2 --> Frame 3 
+//    
+//   t3=R23'(t2-t23)
+//   t3=-R23'*R12'*t12-R23'*t23
+//
+
 void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
 {
     double R_relative[9];
@@ -50,19 +99,7 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
     double updated_rotation[9];
     double updated_t[3];
     
-    /* t1                = R12*t2+t12 */
-    // Previous camera         Current            relative 
-    //   center          =   camera rotation   +    
-    //                           matrix           translation
 
-    // Update process 
-    /*   Center of t2   */
-    //   t2= -(R12)'*t12
-    //   Frame 2 --> Frame 3 
-    //    
-    //   t3=R23'(t2-t23)
-    //   t3=-R23'*R12'*t12-R23'*t23
-    //
     
     PopRotcMatrix((int) mRcMatrix.size()-1, Rpre);   // load previous 
     PopTcMatrix( (int) mTcMatrix.size()-1,Tpre);
@@ -76,26 +113,51 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
     
     cout<<"egomotion"<<endl;
     cout<<updated_t[0]<<" "<<updated_t[1]<<" "<<updated_t[2]<<endl;
-   
+    
+    double* Kmatrix = new double [9];
+    
+    PopKMattix((int) KMatrix.size()-1, Kmatrix) ;
+    
     int NumofReproject = FeaturePts.NumReproject;
     double Tc_updated[3];
     
-//    TwoDalighment(NumofReproject, updated_rotation , updated_t , FeaturePts.mv3ProjectionPts, FeaturePts.mv2ReprojectPts ,EG , Tc_updated);
-//    
-//    cout<<"2d alightment"<<endl;
-//    matrix_print(3,1,Tc_updated);
-//    
-//    // update new camera pose //
-      LoadTcMatrix(updated_t);
+    /*double error1 =  CameraReprojectError(NumofReproject, updated_rotation, updated_t , FeaturePts.mv3ProjectionPts ,FeaturePts.mv2ReprojectPts ,  Kmatrix);
+    cout<<"reprojection error no alightment  " <<error1<<endl;
+    */
+    // this part alight the 3D point with delat vector//
+    
+    TwoDalighment(NumofReproject, updated_rotation , updated_t , FeaturePts.mv3ProjectionPts, FeaturePts.mv2ReprojectPts, Tc_updated);
+    
+    /* 
+    cout<<"Tc_updated"<<endl;
+    matrix_print(3,1,Tc_updated);
+    */
+    /*
+    double error2 =  CameraReprojectError(NumofReproject, updated_rotation, Tc_updated , FeaturePts.mv3ProjectionPts ,FeaturePts.mv2ReprojectPts ,  Kmatrix);
+    cout<<"reprojection error " <<error2<<endl;
+    */
+    v3_t* mv3ProjectPts= new v3_t [NumofReproject];
+    v2_t* mv2ReprojectPts= new v2_t [NumofReproject];
+    
+    for(int i=0;i< NumofReproject;i++)
+    {
+     
+        mv3ProjectPts[i]= FeaturePts.mv3ProjectionPts[i];
+        mv2ReprojectPts[i]= FeaturePts.mv2ReprojectPts[i];
+    
+    }
+    CameraRotRefine( NumofReproject,mv3ProjectPts, mv2ReprojectPts , updated_rotation , Tc_updated , Kmatrix);
+    
+    delete [] mv3ProjectPts;
+    delete [] mv2ReprojectPts;
+    
+      LoadTcMatrix(Tc_updated);
       LoadRotcMatrix(updated_rotation);
-    
-    
-    
     
 
 }
  void  CameraPose:: TwoDalighment(int NumofReproject , double*Rot, double*trans, vector<v3_t> P__3DSolvedforparameters, 
-                                vector<v2_t> P__2DSolvedforparameters, EpipolarGeometry EG, double* Tcmatrix)
+                                vector<v2_t> P__2DSolvedforparameters, double* Tcmatrix)
 {
     
 # define _2d_aligh 2
@@ -141,7 +203,7 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
     
     double Parameter_vec[3];
     
-    DeltaVector_Ransac( _2Dpt, _3Dpt, NumofReproject , Parameter_vec, 30 , 0.1);
+    DeltaVector_Ransac( _2Dpt, _3Dpt, NumofReproject , Parameter_vec, 20 , 0.1);
     
     matrix_transpose(3, 3, Rott, Rott_transpose);
     matrix_product331(Rott_transpose,Parameter_vec , R_t_T);
@@ -153,7 +215,8 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
     memcpy(Tcmatrix, trans, 3*sizeof(double));
     //cout<<"alightment result"<<endl;
 
-    free(_3Dpt); free(_2Dpt);
+    delete [] _3Dpt;
+    delete [] _2Dpt;
     
 }
 
@@ -216,7 +279,7 @@ void  CameraPose:: DeltaVector_Ransac(v2_t* _2Dpt, v3_t* _3Dpt, int size_ , doub
         
         for (int i=0;i<size_;i++)
         {
-            
+             
             Error_2Ddis +=  Euclidence_3D(_2Dpt[i],_3Dpt[i],Parameter_vec_temp);
         }
         
@@ -264,13 +327,16 @@ double CameraPose :: Euclidence_3D (v2_t _2Dpt, v3_t _3Dpt, double* Parameter_ve
     
     error= sqrt((result[0]*result[0])+(result[1]*result[1]));
     
-    free(temp); free(result);
+    delete [] temp; 
+    delete [] result;
     
     return(error);
 }
 
 void CameraPose:: deltavector(v2_t* _2Dpt,  v3_t* _3Dpt, double* Parametrvec_)
 {
+    // find solution use least square //
+    
     double* A=  new double [18];
     double* B = new double[6];
     double* ATA = new double [9]; 
@@ -303,7 +369,11 @@ void CameraPose:: deltavector(v2_t* _2Dpt,  v3_t* _3Dpt, double* Parametrvec_)
     
     matrix_product(3, 6, 6, 1, INVATAAt, B, Parametrvec_);
     
-    free(A); free(B); free(ATA); free(AT);free(INVATA); free(INVATAAt);
+    delete [] A;
+    delete [] B; 
+    delete [] ATA; delete [] AT; 
+    delete [] INVATA;
+    delete [] INVATAAt;
     
 }
 

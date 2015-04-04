@@ -13,8 +13,11 @@
 # include "matrix.h"
 # include "F_matrix.h"
 # include "FeaturePoint.h"
+# include  "CameraPoseRefinement.h"
 
 //#include "FeaturePoint.h"
+
+
 
 using namespace std;
 typedef struct 
@@ -33,6 +36,8 @@ typedef  struct
     double n[3];
     
 } TMat;
+
+double ReprojectionError();
 
 class CameraPose
 {
@@ -127,8 +132,11 @@ class CameraPose
     void PrintTmatrix(int i);
     
     void TwoDalighment( int NumofProject, double*Rot, double*trans, vector<v3_t> P__3DSolvedforparameters, 
-                       vector<v2_t> P__2DSolvedforparameters, EpipolarGeometry EG, double *Tcmatrix);
+                       vector<v2_t> P__2DSolvedforparameters, double *Tcmatrix);
   
+    
+    double CameraReprojectError(int NumPts, double *R, double* Tc, vector<v3_t> Pts,vector<v2_t> Projpts, double * Kmatrix);
+    
     //inline void PopRotmatirx(double* R);
     //inline void PopTmatrix(double* T);
     
