@@ -9,13 +9,14 @@
 #include "typedefine.h"
 #include "Opencvheaders.h"
 
+
 #define CenterX(x) ((x)-IMAGE_WIDTH/2)
 #define CenterY(x) ((x)-IMAGE_HEIGHT/2)
 
 class EpipolarGeometry 
 {
      friend class CameraPose;
-    
+     
   
 public:
     enum Function
@@ -70,6 +71,7 @@ public:
     
     void PointRefinement(v3_t* m_3Dpts,vector<v2_t> & left_pts,vector<v2_t> & right_pts, vector<v3_t> & V3Dpts);
    
+    
     inline int  NumofPts()
         {return( num_ofrefined_pts);}
     

@@ -216,6 +216,7 @@ v3_t triangulate_n(int num_points,
     dgelsy_driver(A, b, x, num_eqs, num_vars, 1);
     
     error = 0.0;
+    
     for (i = 0; i < num_points; i++) 
     {
         double dx, dy;
@@ -239,40 +240,11 @@ v3_t triangulate_n(int num_points,
     //printf("[triangulate_n] Error [before polishing]: %0.3e\n", error);
     
     /* Run a non-linear optimization to refine the result */
-    global_num_points = num_points;
-    global_ps = p;
-    global_Rs = R;  global_ts = t;
-    lmdif_driver(triangulate_n_residual, num_eqs, num_vars, x, 1.0e-8);
- 
-//    error = 0.0;
-//    for (i = 0; i < num_points; i++)
-//    {
-//        double dx, dy;
-//        int Roff = 9 * i;
-//        int toff = 3 * i;
-//        double pp[3];
-//        
-//        /* Compute projection error */
-//        matrix_product331(R + Roff, x, pp);
-//        pp[0] += t[toff + 0];
-//        pp[1] += t[toff + 1];
-//        pp[2] += t[toff + 2];
-//        
-//        
-//        
-//        dx = pp[0] / pp[2] - Vx(p[i]);
-//        dy = pp[1] / pp[2] - Vy(p[i]);
-//         // printf("errro %f %f %f %f \n", pp[0] / pp[2], pp[1] / pp[2],Vx(p[i]),Vy(p[i]));
-//        error += dx * dx + dy * dy;
-//    }
-//    
-//    error = sqrt(error / num_points);
-//    printf("[triangulate_n] Error [after polishing]: %0.3e\n", error);
-//    
-//    if (error_out != NULL) 
-//    {
-//        *error_out = error;
-//    }
+    //global_num_points = num_points;
+    //global_ps = p;
+    //global_Rs = R;  global_ts = t;
+    //lmdif_driver(triangulate_n_residual, num_eqs, num_vars, x, 1.0e-8);
+
 
     r = v3_new(x[0], x[1], x[2]);
     

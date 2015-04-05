@@ -20,7 +20,7 @@ extern "C" {
 
 void CameraRotRefine(int num_points, v3_t *points, v2_t *projs , double *R, double *T, double* Kmatrix,double* UpdateR);
 
-static void Sing_camera_refine(int num_points, v3_t *points, v2_t *projs, double*R );
+static void Sing_camera_refine(int num_points, v3_t *points, v2_t *projs, double*R, double*T );
 
 static void CameraReprojectionError (const int *m, const int *n, 
                                         double *x, double *fvec, int *iflag);

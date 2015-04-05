@@ -18,8 +18,8 @@ using namespace std;
 
 class FeaturePts 
 {   
-     friend class CameraPose;
-    
+    friend class CameraPose;
+    friend class EpipolarGeometry;
 public:
     // temporary storage //
     vector<v3_t> m_3Dpts;               
@@ -31,8 +31,8 @@ public:
     
     //  Add Frame Sequences at following:
     //
-    //  Frame : RIGHT->  LEFT  ->(incoming third view) RIGHT 
-    //          First   Second                         Third
+    //  Frame : RIGHT->  LEFT  ->(incoming third view) -> RIGHT 
+    //          First   Second                            Third
     //
     //
     //
@@ -121,9 +121,11 @@ public:
     }  
     
     void ConnectedVideoSequence(vector<v2_t> Previous_pts   /*previous frame*/, v2_t* Connected_pts, v2_t* Current /*current new frame*/, int Numpts);
+   
     void CreateFeatureTrack(int* tempCurrent, int ConnectedPtsize, v2_t* Connected_pts, v2_t* Current_pts,int FrameNumber);
-    void CollectFeatureTrackProjectPts(int Previous_ptsize , v2_t* Current_pts, int FrameNum);
     
+    void CollectFeatureTrackProjectPts(int Previous_ptsize , v2_t* Current_pts, int FrameNum);
+
     FeaturePts ();
     ~ FeaturePts ();
 

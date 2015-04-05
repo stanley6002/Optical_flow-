@@ -41,7 +41,9 @@ double ReprojectionError();
 
 class CameraPose
 {
-   public:
+    friend class EpipolarGeometry;
+    
+    public:
     
     vector <RotMat> mRcMatrix;
     vector <TMat>   mTcMatrix;
@@ -136,6 +138,8 @@ class CameraPose
   
     
     double CameraReprojectError(int NumPts, double *R, double* Tc, vector<v3_t> Pts,vector<v2_t> Projpts, double * Kmatrix);
+    
+    double TriangulationN_Frames(FeaturePts Pts);
     
     //inline void PopRotmatirx(double* R);
     //inline void PopTmatrix(double* T);

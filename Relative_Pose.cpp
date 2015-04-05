@@ -101,8 +101,6 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
     double updated_rotation[9];
     double updated_t[3];
     
-
-    
     PopRotcMatrix((int) mRcMatrix.size()-1, Rpre);   // load previous 
     PopTcMatrix( (int) mTcMatrix.size()-1,Tpre);
      
@@ -123,20 +121,18 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
     int NumofReproject = FeaturePts.NumReproject;
     double Tc_updated[3];
     
-    /*double error1 =  CameraReprojectError(NumofReproject, updated_rotation, updated_t , FeaturePts.mv3ProjectionPts ,FeaturePts.mv2ReprojectPts ,  Kmatrix);
-    cout<<"reprojection error no alightment  " <<error1<<endl;
-    */
+    //double error1 =  CameraReprojectError(NumofReproject, updated_rotation, updated_t , FeaturePts.mv3ProjectionPts ,FeaturePts.mv2ReprojectPts ,  Kmatrix);
+    //cout<<"reprojection error no alightment  " <<error1<<endl;    
     // this part alight the 3D point with delat vector//
     
     TwoDalighment(NumofReproject, updated_rotation , updated_t , FeaturePts.mv3ProjectionPts, FeaturePts.mv2ReprojectPts, Tc_updated);
     
-    /* 
-    cout<<"Tc_updated"<<endl;
-    matrix_print(3,1,Tc_updated);
-    */
     
     double error2 =  CameraReprojectError(NumofReproject, updated_rotation, Tc_updated , FeaturePts.mv3ProjectionPts ,FeaturePts.mv2ReprojectPts ,  Kmatrix);
-    cout<<"reprojection error " <<error2<<endl;
+    cout<<"after alightment"<<endl;
+    matrix_print(3,1,Tc_updated);
+    
+    //cout<<"reprojection error " <<error2<<endl;
     
     v3_t* mv3ProjectPts= new v3_t [NumofReproject];
     v2_t* mv2ReprojectPts= new v2_t [NumofReproject];
@@ -151,19 +147,22 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
     
     double UpdateR[9];
     CameraRotRefine( NumofReproject ,mv3ProjectPts, mv2ReprojectPts , updated_rotation , Tc_updated , Kmatrix, UpdateR);
-    matrix_print(3,3,UpdateR);
+    
+    //matrix_print(3,3,UpdateR);
+    //matrix_print(3,1,Tc_updated);
     
     double error3 =  CameraReprojectError(NumofReproject, UpdateR, Tc_updated , FeaturePts.mv3ProjectionPts ,FeaturePts.mv2ReprojectPts ,  Kmatrix);
-    cout<<"reprojection error " <<error3<<endl;
+   
+    //cout<<"reprojection error " <<error3<<endl;
     
-    delete [] mv3ProjectPts;
-    delete [] mv2ReprojectPts;
-    
-    
+       
+    // update new camera pose data
     
     LoadTcMatrix(Tc_updated);
     LoadRotcMatrix(updated_rotation);
     
+    delete [] mv3ProjectPts;
+    delete [] mv2ReprojectPts;    
 
 }
  void  CameraPose:: TwoDalighment(int NumofReproject , double*Rot, double*trans, vector<v3_t> P__3DSolvedforparameters, 
@@ -387,4 +386,81 @@ void CameraPose:: deltavector(v2_t* _2Dpt,  v3_t* _3Dpt, double* Parametrvec_)
     
 }
 
+double CameraPose :: TriangulationN_Frames(FeaturePts Pts)
+{
+    //int index=0;
+    int num_frame= (int)v2_frame[index].size();
+    //cout<<num_frame<<endl;
+    v2_t *pv = new v2_t[num_frame];
+    double *Rs= new double [9*  num_frame];
+    double *ts = new double[3 * num_frame];
+    
+    for (int i=0; i<num_frame;i++)
+        // for (int i=0; i<2;i++)
+    {
+        int N = (int)v2_frame[index][i];
+        
+        double  Pt3[3]= {v2_location[index][i].p[0]-400, v2_location[index][i].p[1]-300, 1.0};
+        double Translation_Scaled [3];
+        double Translated [3];
+        double K [9];
+        double Kinv [9];
+        double Rotation[9];
+        // double Translation_Scaled [3];
+        // double Translated [3];
+        // double K [9];
+        // double Kinv[9];
+        // double *Rotation = new double [9];
+        // double Rotation[9];
+        
+        GetIntrinsics(K,N);  /* Get_focal_length* i is ith camera's parameters*/ 
+       
+        //matrix_print(3, 3, K);
+        matrix_invert(3, K, Kinv);
+        double p_n[3];
+        
+        matrix_product(3, 3, 3, 1, Kinv, Pt3, p_n);
+        pv[i]= v2_new(-p_n[0],-p_n[1]);
+        //pv[i] = UndistortNormalizedPoint(pv[i], cameras_app[N]);
+        
+        //cout<<"2D  "<<pv[i].p[0]<<" "<<pv[i].p[1]<<endl;
+        Rotation[0]= cameras_app[N].R[0], Rotation[1]= cameras_app[N].R[1], Rotation[2]=cameras_app[N].R[2],
+        Rotation[3]= cameras_app[N].R[3], Rotation[4]= cameras_app[N].R[4], Rotation[5]=cameras_app[N].R[5],
+        Rotation[6]= cameras_app[N].R[6], Rotation[7]= cameras_app[N].R[7], Rotation[8]=cameras_app[N].R[8];
+        memcpy(Rs + 9 * i, Rotation, 9 * sizeof(double));
+        double Translation[3]={cameras_app[N].t[0],cameras_app[N].t[1],cameras_app[N].t[2]};
+        matrix_product(3,3,3,1,Rotation,Translation,Translated);
+        matrix_scale(3,1,Translated,-1.0,Translation_Scaled); 
+        memcpy(ts + 3 * i,Translation_Scaled, 3 * sizeof(double));
+    }
+    double error=0;
+    
+    v3_t pt = triangulate_n(num_frame, pv, Rs, ts, &error);
+    //cout<<pt.p[0]<<" "<<pt.p[1]<<" "<<pt.p[2]<<"  "<<endl;
+    _3Dlocation[index].p[0]=pt.p[0];
+    _3Dlocation[index].p[1]=pt.p[1];
+    _3Dlocation[index].p[2]=pt.p[2];
+    double _2D_error=0;
+    // cout<<endl;
+    for (int i=0; i<num_frame;i++)
+    {
+        int N_reprojection = (int)v2_frame[index][i];
+        //double  Pt3__reprojection[3]= {v2_location[index][i].p[0]-400, v2_location[index][i].p[1]-300, 1.0};
+        v2_t pr= reprojection_error(&cameras_app[N_reprojection], pt);
+        //cout<<"2D"<<v2_location[index][i].p[0]<<" "<<v2_location[index][i].p[1]<<" ";
+        //cout<<"reprojection "<<pr.p[0]+400<<" "<<pr.p[1]+300<<" "<<endl;
+        double dx = v2_location[index][i].p[0]-(pr.p[0]+400);
+        double dy = v2_location[index][i].p[1]-(pr.p[1]+300);
+        double err1 = dx * dx + dy * dy;
+        //cout<<"  "<<i<<"  "<< err1<<"  ";
+        _2D_error+= dx * dx + dy * dy;
+    }
+    
+    //cout<<" reprojectionerror "<<_2D_error<<" num_frame "<<num_frame<<endl;
+    
+    free(Rs);
+    free(ts);
+    delete[]pv;
+    return(_2D_error);
+}
 
