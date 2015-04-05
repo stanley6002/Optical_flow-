@@ -36,6 +36,8 @@ double CameraPose:: CameraReprojectError(int NumPts, double *R, double* Tc, vect
     
     double dx = Vx(Projpts[i]) - xij[0];
     double dy = Vy(Projpts[i]) - xij[1];
+    
+    //cout<< Vx(Projpts[i])<<" "<<Vy(Projpts[i])<<" "<< xij[0]<<" "<<xij[1]<<endl;   
      error += sqrt(dx * dx + dy * dy);
     }
     return(error);
@@ -132,10 +134,10 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
     cout<<"Tc_updated"<<endl;
     matrix_print(3,1,Tc_updated);
     */
-    /*
+    
     double error2 =  CameraReprojectError(NumofReproject, updated_rotation, Tc_updated , FeaturePts.mv3ProjectionPts ,FeaturePts.mv2ReprojectPts ,  Kmatrix);
     cout<<"reprojection error " <<error2<<endl;
-    */
+    
     v3_t* mv3ProjectPts= new v3_t [NumofReproject];
     v2_t* mv2ReprojectPts= new v2_t [NumofReproject];
     
@@ -146,13 +148,21 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
         mv2ReprojectPts[i]= FeaturePts.mv2ReprojectPts[i];
     
     }
-    CameraRotRefine( NumofReproject,mv3ProjectPts, mv2ReprojectPts , updated_rotation , Tc_updated , Kmatrix);
+    
+    double UpdateR[9];
+    CameraRotRefine( NumofReproject ,mv3ProjectPts, mv2ReprojectPts , updated_rotation , Tc_updated , Kmatrix, UpdateR);
+    matrix_print(3,3,UpdateR);
+    
+    double error3 =  CameraReprojectError(NumofReproject, UpdateR, Tc_updated , FeaturePts.mv3ProjectionPts ,FeaturePts.mv2ReprojectPts ,  Kmatrix);
+    cout<<"reprojection error " <<error3<<endl;
     
     delete [] mv3ProjectPts;
     delete [] mv2ReprojectPts;
     
-      LoadTcMatrix(Tc_updated);
-      LoadRotcMatrix(updated_rotation);
+    
+    
+    LoadTcMatrix(Tc_updated);
+    LoadRotcMatrix(updated_rotation);
     
 
 }
@@ -203,7 +213,7 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
     
     double Parameter_vec[3];
     
-    DeltaVector_Ransac( _2Dpt, _3Dpt, NumofReproject , Parameter_vec, 20 , 0.1);
+    DeltaVector_Ransac( _2Dpt, _3Dpt, NumofReproject , Parameter_vec, 30 , 0.1);
     
     matrix_transpose(3, 3, Rott, Rott_transpose);
     matrix_product331(Rott_transpose,Parameter_vec , R_t_T);
