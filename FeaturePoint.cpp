@@ -72,14 +72,14 @@ void FeaturePts::CollectFeatureTrackProjectPts(int Previous_ptsize , v2_t* Curre
     // cout<< " ReProjection size "<< mv2ReprojectPts.size()<<endl;
 }
  
-void FeaturePts::ConnectedVideoSequence(vector<v2_t> Previous_pts   /*previous frame*/, v2_t* Connected_pts /*current new frame*/,v2_t* Current_pts, int Numpts)
+void FeaturePts::ConnectedVideoSequence(vector<v2_t> Previous_pts   /*previous frame*/, v2_t* Connected_pts /*current new frame*/,v2_t* Current_pts, int Numpts , int FrameNumber)
 {
     int Previous_ptsize   =   (int)Previous_pts.size();
     int ConnectedPtsize   =   Numpts;
     
     // add frame number in here
     
-    int FrameNumber       = 2;    // second and third overlapped
+    //int FrameNumber       = 2;    // second and third overlapped
     
     this-> StackIndex=  new int [Previous_ptsize](); 
     
@@ -150,4 +150,34 @@ void FeaturePts::ConnectedVideoSequence(vector<v2_t> Previous_pts   /*previous f
     delete [] tempCurrent;
     delete [] tempPrevious;
 }
+void FeaturePts:: UpdatedFeatureTrack(vector<v2_t> left_pts, vector<v2_t> right_pts, vector<v3_t>V3Dpts, int FrameNum)
+{
 
+    int size_= (int) mv2_frame.size();
+       for(int i=0;i<size_ ; i++)
+         {
+        int index = (int) mv2_frame[i].size()-1;
+         if (mv2_frame[i][index]== FrameNum)
+          {
+            // pick up 2D and 3D points
+          v2_t leftpt  =mv2_location[i][index-1];
+          v2_t rightpt =mv2_location[i][index];
+          v3_t V3pt    =m_3Dpts[i];
+          left_pts.push_back(leftpt);
+          right_pts.push_back(rightpt);    
+          V3Dpts.push_back(V3pt);
+          }
+          
+    }
+    //cout<<left_pts.size()<<" "<<right_pts.size()<<" "<<V3Dpts.size()<<endl;
+}
+void FeaturePts::CleanFeatureTrack()
+{
+    vector<v2_t> leftPtsEmpty;
+    vector<v2_t> rightPtsEmpty;
+    vector<v3_t> _3DptsEmpty;
+    
+    m_leftPts.swap (leftPtsEmpty);
+    m_rightPts.swap(rightPtsEmpty);
+    m_3Dpts.swap(_3DptsEmpty);
+}

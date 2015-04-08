@@ -149,11 +149,11 @@ int main (int argc, const char * argv[])
                     // for plot 
                     int size_match= (int) match_query.size();
                     
-                    int numTrialFmatrix = 50;
-                    int numTrialRelativePose  =20;
-                    int Focuslength= 280;
+                    int numTrialFmatrix = 30;
+                    int numTrialRelativePose = 30;
+                    int Focuslength= 270;
                     int Ransac_threshold= 2.0;
-                    float MaxAngle =0.065;
+                    float MaxAngle =0.07;
                    
                     EpipolarGeometry EpipolarGeometry(match_query, match_train, size_match, numTrialFmatrix, numTrialRelativePose, Focuslength, Ransac_threshold);  
                     
@@ -189,27 +189,31 @@ int main (int argc, const char * argv[])
                             
                             CameraPose.First2viewInitialization(EpipolarGeometry.R1matrix, EpipolarGeometry.R_relative, EpipolarGeometry.t1matrix, EpipolarGeometry.t_relative);
                           
-                            OpenGLPlot. PlotCamera(EpipolarGeometry.t_relative);
-                            OpenGLPlot. PlotVertex(EpipolarGeometry.NumofPts(), V3Dpts);   
+                            //OpenGLPlot. PlotCamera(EpipolarGeometry.t_relative);
+                            //OpenGLPlot. PlotVertex(EpipolarGeometry.NumofPts(), V3Dpts);   
                                                         
-                            //for (int i=0;i<100;i++)
-                            // cout<< EpipolarGeometry.rrefined_pt[i].p[0]<<" "<<EpipolarGeometry.rrefined_pt[i].p[1]<<" "<<EpipolarGeometry.lrefined_pt[i].p[0]<<" "<<EpipolarGeometry.lrefined_pt[i].p[1]<<endl;
+                            //for (int i=0;i<(int) V3Dpts.size() ;i++)
+                            // cout<<V3Dpts[i].p[0]<<" "<<V3Dpts[i].p[1]<<" "<<V3Dpts[i].p[2]<<endl;
                             
                             FeaturePts.Loadv2Pts( left_pts, right_pts);  
                             
                             // frame: Right-> left -> Right 
+                           
                             FeaturePts.Loadv3Pts(V3Dpts); 
+                            int FrameNum= 2 ;
+                            FeaturePts.LoadFeatureList(FrameNum);
                         }
                         else
                         {
-                             
+                       
                             CameraPose. InitializeKMatrix(Focuslength);
+                            
                             int FrameNum =2;
-                            FeaturePts.LoadFeatureList(FrameNum);
+                            
                              
                             // Connect feature point and create feature tracks 
                             
-                            FeaturePts.ConnectedVideoSequence(FeaturePts.m_rightPts, EpipolarGeometry.lrefined_pt /*connected pts*/ , EpipolarGeometry.rrefined_pt  /* current pts*/ , EpipolarGeometry.num_ofrefined_pts);
+                            FeaturePts.ConnectedVideoSequence( FeaturePts.m_rightPts, EpipolarGeometry.lrefined_pt /*connected pts*/ , EpipolarGeometry.rrefined_pt  /* current pts*/ , EpipolarGeometry.num_ofrefined_pts,FrameNum);
                              
                             CameraPose.Egomotion(EpipolarGeometry, FeaturePts);
                             
@@ -217,13 +221,22 @@ int main (int argc, const char * argv[])
                             memcpy(T, CameraPose.mTcMatrix[FrameNum].n,3*sizeof(double));
                             matrix_print(3,1,T);
                            
-                            OpenGLPlot. Setview();
-                            OpenGLPlot. PlotCamera(T);
+                            CameraPose.TriangulationN_Frames(FeaturePts);
+                            
+                            vector<v2_t> left_pts;
+                            vector<v2_t> right_pts;
+                            vector<v3_t> V3Dpts;   
+                            
+                            FeaturePts. UpdatedFeatureTrack(left_pts,right_pts,V3Dpts, FrameNum);
+                            
+                            FeaturePts. RemoveFeatureTrack();
+                            //OpenGLPlot. Setview();
+                            //OpenGLPlot. PlotCamera(T);
                             
                             //OpenGLPlot. PlotVertex(EpipolarGeometry.NumofPts(), V3Dpts); 
                             
-                            cout<< CameraPose.SizeofPose()<<endl;
-                            cout<< FeaturePts.NumReproject<<endl;
+                            //cout<< CameraPose.SizeofPose()<<endl;
+                            //cout<< FeaturePts.NumReproject<<endl;
 
                             break;
                                                       

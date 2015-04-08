@@ -64,6 +64,9 @@ public:
     void InitializeIntrinsicMatrix (double* Kmatrix);
     
     void TwoviewTriangulation (vector<v2_t> & left_pts,vector<v2_t> & right_pts, vector<v3_t> & V3Dpts );
+    
+    void TwoviewTriangulation_1(vector<v2_t> & left_pts,vector<v2_t> & right_pts, vector<v3_t> & V3Dpts);
+    
     void FindApicalAngle (float MaxAngle);
     void InitializeFirstPmatrix(); 
     

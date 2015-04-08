@@ -17,6 +17,21 @@
 
 //#include "FeaturePoint.h"
 
+void DumpPointsToPly(char *output_directory, vector<v3_t> points
+                     ,int num_points) ;
+
+bool CheckCheirality(v3_t _3DPts);
+
+float Variance (vector<v3_t> m_3Dpts, const  float depth , const int size_);
+
+void  _3DdepthRefine (vector<v3_t> _3Dpts, bool* tempvector, int NumPts);
+
+void RefineN_FramePoints(vector<v3_t> _3DPts, int NumPts, bool*tempvector);
+
+float  Variance (vector<v3_t> _3Dpts, const float depth , const int size_);
+
+bool CheckCheirality(v3_t pt);
+
 
 
 using namespace std;
@@ -38,7 +53,6 @@ typedef  struct
 } TMat;
 
 double ReprojectionError();
-
 class CameraPose
 {
     friend class EpipolarGeometry;
@@ -85,7 +99,12 @@ class CameraPose
         memcpy( tempT.n , T, 3* sizeof(double));
         mTcMatrix.push_back(tempT);
     }
-    
+    inline void LoadKMatrix(double* K, int i)
+    {
+          KMatrix[i].n[0]= K[0];  KMatrix[i].n[1]= K[1];  KMatrix[i].n[2]= K[2];
+          KMatrix[i].n[3]= K[3];  KMatrix[i].n[4]= K[4];  KMatrix[i].n[5]= K[5];
+          KMatrix[i].n[6]= K[6];  KMatrix[i].n[7]= K[7];  KMatrix[i].n[8]= K[8];  
+    }
     inline void First2viewInitialization(double* R1, double* R_relative, double* T1, double* T_relative)
     {
         LoadRotcMatrix(R1);
@@ -133,13 +152,16 @@ class CameraPose
     
     void PrintTmatrix(int i);
     
+    void PrintKmatrix(int i);
+    
     void TwoDalighment( int NumofProject, double*Rot, double*trans, vector<v3_t> P__3DSolvedforparameters, 
                        vector<v2_t> P__2DSolvedforparameters, double *Tcmatrix);
   
     
     double CameraReprojectError(int NumPts, double *R, double* Tc, vector<v3_t> Pts,vector<v2_t> Projpts, double * Kmatrix);
     
-    double TriangulationN_Frames(FeaturePts Pts);
+    double TriangulationN_Frames(FeaturePts& Pts);
+   
     
     //inline void PopRotmatirx(double* R);
     //inline void PopTmatrix(double* T);

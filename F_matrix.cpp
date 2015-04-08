@@ -34,7 +34,7 @@ void F_matrix_process (int num_pts, v3_t* r_pt, v3_t* l_pt, double *F_final, int
     for (int i=0; i<num_pts;i++)
     {
         double distance = fmatrix_compute_residual(F,r_pt[i],l_pt[i]);
-        if (distance<40)
+        if (distance<10)
         { 
         
         //cout<<distance1<<endl;
@@ -100,7 +100,7 @@ void F_matrix_process (int num_pts, v3_t* r_pt, v3_t* l_pt, double *F_final, int
         double distance = fmatrix_compute_residual(F,r_pt[i],l_pt[i]);
         // double distance= fmatrix_compute_distance(F,  r_pt[i],  l_pt[i]); 
       
-        if (distance<40)
+        if (distance<10)
         {
             non_inliers.push_back(i);
             // cout<< l_pt[i].p[0]<<" "<<l_pt[i].p[1]<<" "<<r_pt[i].p[0]<<" "<<r_pt[i].p[1]<<endl;
@@ -822,6 +822,39 @@ void EpipolarGeometry::TwoviewTriangulation(vector<v2_t> & left_pts,vector<v2_t>
     PointRefinement(m_3Dpts, left_pts , right_pts, V3Dpts);
      
 }
+
+
+void EpipolarGeometry::TwoviewTriangulation_1(vector<v2_t> & left_pts,vector<v2_t> & right_pts, vector<v3_t> & V3Dpts)
+{
+    TwoviewTria=1;
+    int size_= num_ofrefined_pts;
+    v3_t m_3Dpts [size_];
+    
+    double error_tr=0.0;
+    
+    for (int i=0; i< size_ ;i++)
+    {
+        bool in_front = true;
+        double angle = 0.0;
+        v3_t temp; 
+        v2_t p;
+        v2_t q;
+        p.p[0] = lrefined_pt[i].p[0];
+        p.p[1] = lrefined_pt[i].p[1];
+        q.p[0] = rrefined_pt[i].p[0];
+        q.p[1] = rrefined_pt[i].p[1]; 
+        
+        temp = Triangulate(p, q, R1matrix , t1matrix ,R_relative, t_relative, error_tr, in_front, angle ,true,K1matrix,K2matrix);  
+        
+        m_3Dpts[i]= temp;
+        V3Dpts.push_back(m_3Dpts[i]);
+        //printf("%0.4f %0.4f %0.4f\n", temp.p[0], temp.p[1],temp.p[2]);
+    }
+    
+    //PointRefinement(m_3Dpts, left_pts , right_pts, V3Dpts);
+    
+}
+
 
 void EpipolarGeometry::PointRefinement(v3_t* m_3Dpts,vector<v2_t> & left_pts,vector<v2_t> & right_pts, vector<v3_t> & V3Dpts)
 {

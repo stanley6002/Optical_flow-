@@ -41,8 +41,6 @@ void CameraRotRefine(int num_points, v3_t *points, v2_t *projs , double *R, doub
     GLOBAL_Tc      =  malloc(sizeof(double)*3);
     GLOBAL_Kmatrix =  malloc(sizeof(double)*9);
   
-    
-    
     memcpy(GLOBAL_proj, projs, sizeof(v2_t)*num_points );
     memcpy(GLOBAL_points, points, sizeof(v3_t)*num_points );
     memcpy(GLOBAL_Rot ,R, sizeof(double)*9 );
@@ -50,7 +48,7 @@ void CameraRotRefine(int num_points, v3_t *points, v2_t *projs , double *R, doub
     memcpy(GLOBAL_Kmatrix ,Kmatrix, sizeof(double)*9 );
     
     //double UpdatedR[9];
-    Sing_camera_refine( num_points, points, projs , UpdateR, T);  //add new update rotmatrix//
+    Sing_camera_refine( num_points, points, projs ,UpdateR);  //add new update rotmatrix//
     
     free (GLOBAL_proj); free (GLOBAL_points);
     free (GLOBAL_Rot);  free (GLOBAL_Tc);
@@ -58,22 +56,30 @@ void CameraRotRefine(int num_points, v3_t *points, v2_t *projs , double *R, doub
     
 }
 
-static void Sing_camera_refine(int num_points, v3_t *points, v2_t *projs, double*R, double*T )
+static void Sing_camera_refine(int num_points, v3_t *points, v2_t *projs, double*R )
 {
     
-    double x[6] = {0.0, 0.0, 0.0, GLOBAL_Tc[0], GLOBAL_Tc[1], GLOBAL_Tc[2]};  
-    lmdif_driver2( CameraReprojectionError, 2 * num_points, 6 , x, 1.0e-6);     
+    //double x[7] = {0.0, 0.0, 0.0, GLOBAL_Tc[0], GLOBAL_Tc[1], GLOBAL_Tc[2], GLOBAL_Kmatrix[0]};  
+    double x[3] = {0.0, 0.0, 0.0};
+    lmdif_driver2( CameraReprojectionError, 2 * num_points, 3 , x, 1.0e-8);     
     
     double Rnew[9];
-    double Tnew[3];
+    //double Tnew[3];
     double Rvec[3];  
+    //double K_result[1];
+    
     
     memcpy( Rvec, x ,  3 * sizeof(double));  
-    memcpy(Tnew,x+3,3*sizeof(double));
+    //memcpy(Tnew,x+3,3*sizeof(double));
+    //memcpy(K_result,x+6,1*sizeof(double));
+    
+    //double Kmatrix[9]= {K_result[0], 0, 0, 0, K_result[0],0,0,0,1};
+    
     Sing_rot_update(GLOBAL_Rot, Rvec , Rnew);
     
     memcpy(R,Rnew, 9*sizeof(double));
-    memcpy(T,Tnew,3*sizeof(double));
+    //memcpy(T,Tnew,3*sizeof(double));
+    //memcpy(K,Kmatrix,9*sizeof(double));
     
 }
 static void CameraReprojectionError(const int *m, const int *n, 
@@ -115,11 +121,12 @@ static void CameraProjectPoint(double *aj, double *bi,
 {
 
     double *w;
-    double *t;
+    //double *t;
+    //double *k;
     /* Compute translation, rotation update */
     w = aj ;  // pick up w //
-    t = aj+3;
-   
+    //t = aj+3;
+    //k = aj+6;
     
     double R[9]={GLOBAL_Rot[0],GLOBAL_Rot[1],GLOBAL_Rot[2]
                 ,GLOBAL_Rot[3],GLOBAL_Rot[4],GLOBAL_Rot[5]
@@ -132,13 +139,13 @@ static void CameraProjectPoint(double *aj, double *bi,
     
     Sing_rot_update(R, w, Rnew);  // recover w to Rotation matrix //
     
-    //tnew[0] =GLOBAL_Tc[0]; 
-    //tnew[1] =GLOBAL_Tc[1]; 
-    //tnew[2] =GLOBAL_Tc[2]; 
+    tnew[0] =GLOBAL_Tc[0]; 
+    tnew[1] =GLOBAL_Tc[1]; 
+    tnew[2] =GLOBAL_Tc[2]; 
     
-    tnew[0] =t[0]; 
-    tnew[1] =t[1]; 
-    tnew[2] =t[2]; 
+    //tnew[0] =t[0]; 
+    //tnew[1] =t[1]; 
+    //tnew[2] =t[2]; 
     
     
     double b2[3];  

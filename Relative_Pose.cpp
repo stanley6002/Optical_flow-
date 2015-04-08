@@ -66,6 +66,13 @@ void CameraPose::PrintTmatrix(int i)
     matrix_print(3,1,tempT);
 }
 
+void CameraPose::PrintKmatrix(int i)
+{
+    double tempK[9];
+    PopKMattix(i,tempK);
+    matrix_print(3,3,tempK);
+}
+
 /* t1                = R12*t2+t12 */
 // Previous camera         Current            relative 
 //   center          =   camera rotation   +    
@@ -121,8 +128,8 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
     int NumofReproject = FeaturePts.NumReproject;
     double Tc_updated[3];
     
-    //double error1 =  CameraReprojectError(NumofReproject, updated_rotation, updated_t , FeaturePts.mv3ProjectionPts ,FeaturePts.mv2ReprojectPts ,  Kmatrix);
-    //cout<<"reprojection error no alightment  " <<error1<<endl;    
+    double error1 =  CameraReprojectError(NumofReproject, updated_rotation, updated_t , FeaturePts.mv3ProjectionPts ,FeaturePts.mv2ReprojectPts ,  Kmatrix);
+    cout<<"reprojection error no alightment  " <<error1/NumofReproject<<endl;    
     // this part alight the 3D point with delat vector//
     
     TwoDalighment(NumofReproject, updated_rotation , updated_t , FeaturePts.mv3ProjectionPts, FeaturePts.mv2ReprojectPts, Tc_updated);
@@ -131,8 +138,7 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
     double error2 =  CameraReprojectError(NumofReproject, updated_rotation, Tc_updated , FeaturePts.mv3ProjectionPts ,FeaturePts.mv2ReprojectPts ,  Kmatrix);
     cout<<"after alightment"<<endl;
     matrix_print(3,1,Tc_updated);
-    
-    //cout<<"reprojection error " <<error2<<endl;
+    cout<<"reprojection error " <<error2/NumofReproject<<endl;
     
     v3_t* mv3ProjectPts= new v3_t [NumofReproject];
     v2_t* mv2ReprojectPts= new v2_t [NumofReproject];
@@ -153,13 +159,15 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
     
     double error3 =  CameraReprojectError(NumofReproject, UpdateR, Tc_updated , FeaturePts.mv3ProjectionPts ,FeaturePts.mv2ReprojectPts ,  Kmatrix);
    
-    //cout<<"reprojection error " <<error3<<endl;
+    cout<<"NumofReproject" << NumofReproject <<"reprojection error " <<error3/NumofReproject<<endl;
     
        
     // update new camera pose data
-    
+   
+    LoadKMatrix(Kmatrix,(int) KMatrix.size()-1);
     LoadTcMatrix(Tc_updated);
     LoadRotcMatrix(updated_rotation);
+   
     
     delete [] mv3ProjectPts;
     delete [] mv2ReprojectPts;    
@@ -212,7 +220,7 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
     
     double Parameter_vec[3];
     
-    DeltaVector_Ransac( _2Dpt, _3Dpt, NumofReproject , Parameter_vec, 30 , 0.1);
+    DeltaVector_Ransac( _2Dpt, _3Dpt, NumofReproject , Parameter_vec, 50 , 0.1);
     
     matrix_transpose(3, 3, Rott, Rott_transpose);
     matrix_product331(Rott_transpose,Parameter_vec , R_t_T);
@@ -264,7 +272,7 @@ void  CameraPose:: DeltaVector_Ransac(v2_t* _2Dpt, v3_t* _3Dpt, int size_ , doub
                     }
                 }
                  repeat++;
-                if(repeat==500)
+                if(repeat==800)
                 {
                     cout<<" not enough points"<<endl;
                     break;
@@ -305,8 +313,6 @@ void  CameraPose:: DeltaVector_Ransac(v2_t* _2Dpt, v3_t* _3Dpt, int size_ , doub
             Parameter_vec_temp_ransac[2] = Parameter_vec_temp[2];
             
         }
-        
-        
     }
     
     //cout<<"parameters_best_ransac :"<<Parameter_vec_temp_ransac[0]<<" "<<Parameter_vec_temp_ransac[1]<<" "<<Parameter_vec_temp_ransac[2]<<" minimum error "<<Minerror<<endl;
@@ -386,81 +392,232 @@ void CameraPose:: deltavector(v2_t* _2Dpt,  v3_t* _3Dpt, double* Parametrvec_)
     
 }
 
-double CameraPose :: TriangulationN_Frames(FeaturePts Pts)
-{
-    //int index=0;
-    int num_frame= (int)v2_frame[index].size();
-    //cout<<num_frame<<endl;
-    v2_t *pv = new v2_t[num_frame];
-    double *Rs= new double [9*  num_frame];
-    double *ts = new double[3 * num_frame];
+double CameraPose :: TriangulationN_Frames(FeaturePts& Pts)
+{    
+    int NumPts = (int) Pts.mv2_location.size();
     
-    for (int i=0; i<num_frame;i++)
-        // for (int i=0; i<2;i++)
+    //v3_t* _3Dpts = new v3_t[NumPts];
+    vector<v3_t> _3Dpts;
+    
+    for(int i=0;i< NumPts;i++)
     {
-        int N = (int)v2_frame[index][i];
-        
-        double  Pt3[3]= {v2_location[index][i].p[0]-400, v2_location[index][i].p[1]-300, 1.0};
+    
+       int num_frame= (int)Pts.mv2_frame[i].size();  // read number of frame in the list //
+       v2_t *pv = new v2_t[num_frame];
+       double *Rs= new double [9*  num_frame];
+       double *ts = new double[3 * num_frame];
+    
+     for (int j=0; j<num_frame ;j++)
+        // for (int i=0; i<2;i++)
+       {
+        int N = (int) Pts.mv2_frame[i][j];
+        double Pt3[3]= {Pts.mv2_location[i][j].p[0], Pts.mv2_location[i][j].p[1], 1.0};
         double Translation_Scaled [3];
         double Translated [3];
         double K [9];
         double Kinv [9];
         double Rotation[9];
-        // double Translation_Scaled [3];
-        // double Translated [3];
-        // double K [9];
-        // double Kinv[9];
-        // double *Rotation = new double [9];
-        // double Rotation[9];
+        double Tc[3];
         
-        GetIntrinsics(K,N);  /* Get_focal_length* i is ith camera's parameters*/ 
-       
-        //matrix_print(3, 3, K);
+        PopKMattix(N, K);  
+        /* Get_focal_length* i is ith camera's parameters*/ 
+        //cout<<"T vector"<<endl;       
+        
         matrix_invert(3, K, Kinv);
         double p_n[3];
         
         matrix_product(3, 3, 3, 1, Kinv, Pt3, p_n);
-        pv[i]= v2_new(-p_n[0],-p_n[1]);
-        //pv[i] = UndistortNormalizedPoint(pv[i], cameras_app[N]);
+        pv[j]= v2_new(-p_n[0],-p_n[1]);
         
-        //cout<<"2D  "<<pv[i].p[0]<<" "<<pv[i].p[1]<<endl;
-        Rotation[0]= cameras_app[N].R[0], Rotation[1]= cameras_app[N].R[1], Rotation[2]=cameras_app[N].R[2],
-        Rotation[3]= cameras_app[N].R[3], Rotation[4]= cameras_app[N].R[4], Rotation[5]=cameras_app[N].R[5],
-        Rotation[6]= cameras_app[N].R[6], Rotation[7]= cameras_app[N].R[7], Rotation[8]=cameras_app[N].R[8];
-        memcpy(Rs + 9 * i, Rotation, 9 * sizeof(double));
-        double Translation[3]={cameras_app[N].t[0],cameras_app[N].t[1],cameras_app[N].t[2]};
-        matrix_product(3,3,3,1,Rotation,Translation,Translated);
+        PopRotcMatrix(N, Rotation);
+
+        memcpy(Rs + 9 * j, Rotation, 9 * sizeof(double));
+       
+        PopTcMatrix(N,Tc);
+        matrix_product(3,3,3,1,Rotation,Tc,Translated);
         matrix_scale(3,1,Translated,-1.0,Translation_Scaled); 
-        memcpy(ts + 3 * i,Translation_Scaled, 3 * sizeof(double));
+        memcpy(ts + 3 * j,Translation_Scaled, 3 * sizeof(double));
+        
     }
+    
     double error=0;
     
     v3_t pt = triangulate_n(num_frame, pv, Rs, ts, &error);
-    //cout<<pt.p[0]<<" "<<pt.p[1]<<" "<<pt.p[2]<<"  "<<endl;
-    _3Dlocation[index].p[0]=pt.p[0];
-    _3Dlocation[index].p[1]=pt.p[1];
-    _3Dlocation[index].p[2]=pt.p[2];
-    double _2D_error=0;
-    // cout<<endl;
-    for (int i=0; i<num_frame;i++)
+    _3Dpts.push_back(pt); 
+        
+      free(Rs);
+      free(ts);
+      delete[]pv;
+    }
+     bool* tempvector = new bool [NumPts];
+      for (int i=0;i<NumPts;i++)
+           tempvector[i]= false;
+     
+    RefineN_FramePoints( _3Dpts , NumPts, tempvector);
+    
+    int shift_index=0;
+    for(int i=0;i< NumPts; i++)
     {
-        int N_reprojection = (int)v2_frame[index][i];
-        //double  Pt3__reprojection[3]= {v2_location[index][i].p[0]-400, v2_location[index][i].p[1]-300, 1.0};
-        v2_t pr= reprojection_error(&cameras_app[N_reprojection], pt);
-        //cout<<"2D"<<v2_location[index][i].p[0]<<" "<<v2_location[index][i].p[1]<<" ";
-        //cout<<"reprojection "<<pr.p[0]+400<<" "<<pr.p[1]+300<<" "<<endl;
-        double dx = v2_location[index][i].p[0]-(pr.p[0]+400);
-        double dy = v2_location[index][i].p[1]-(pr.p[1]+300);
-        double err1 = dx * dx + dy * dy;
-        //cout<<"  "<<i<<"  "<< err1<<"  ";
-        _2D_error+= dx * dx + dy * dy;
+        if(tempvector[i]== true)
+        {
+          int removal_index =i;
+          removal_index -=  shift_index;
+          _3Dpts.erase(_3Dpts.begin()+removal_index);
+          Pts.mv2_frame.erase(Pts.mv2_frame.begin()+removal_index);
+          Pts.mv2_location.erase(Pts.mv2_location.begin()+removal_index);
+          shift_index++;
+        }   
+     }
+    Pts. m_3Dpts.swap(_3Dpts);
+    DumpPointsToPly("/Users/chih-hsiangchang/Desktop/Archive/result.ply", Pts. m_3Dpts
+                    ,(NumPts-shift_index));
+    
+    cout<<"test"<<endl;
+    //return(_2D_error);
+}
+void RefineN_FramePoints(vector<v3_t>_3DPts, int NumPts, bool* tempvector)
+{
+    /// check Cheirality
+    for (int i=0;i<NumPts;i++)
+     {
+        if(CheckCheirality(_3DPts[i]))
+        { 
+            tempvector[i]= true;
+        }
     }
     
-    //cout<<" reprojectionerror "<<_2D_error<<" num_frame "<<num_frame<<endl;
+    // check depth //
+    _3DdepthRefine(_3DPts,tempvector, NumPts);
     
-    free(Rs);
-    free(ts);
-    delete[]pv;
-    return(_2D_error);
+ }
+void _3DdepthRefine (vector<v3_t> m_3Dpts, bool* tempvector, int num_ofrefined_pts)
+{
+    
+    int size_= num_ofrefined_pts;
+    double max_number = -1.0;    // remove outliers from candidated points 
+    double min_number = -50.0;
+    double range;
+    int i;
+    int Nbins = 50;
+    
+    int Bin[50]={};
+    
+    int mx_index= 0;
+    double  Range_low;
+    double  Range_upper;
+    
+    for (int i=0;i< size_;i++)
+    {
+        if ( m_3Dpts[i].p[2]< min_number)
+            tempvector[i]= true;                 
+    }
+    
+    range = (max_number - min_number) / Nbins;
+    for(i=0; i<size_;i++)
+    {
+        if (tempvector[i] == false)
+        {
+            for(int index=0; index< Nbins; index++)
+            {
+                
+                Range_low = min_number   +   (index)*range;
+                Range_upper = min_number +   (index+1)*range;
+                float x = (float) m_3Dpts[i].p[2];
+                
+                if ( Range_low < x && x <= Range_upper)              
+                {
+                    Bin[index] += 1; 
+                    
+                }
+            }
+        }
+    }
+    int mx_bin  = 0;
+    for (int i=0;i<Nbins;i++)
+    {
+        if(Bin[i]> mx_bin)
+        {
+            mx_bin = Bin[i];
+            mx_index = i;
+            
+        }
+    }
+    
+    float depth = (min_number+(mx_index)*range);
+    float varince= Variance (m_3Dpts, depth, size_);
+    float *densitytemp  = new float [size_]; 
+    cout<< depth <<"variance "<<varince <<endl;
+    for (int i=0;i< size_;i++)
+    {
+        float x = (float) m_3Dpts[i].p[2];
+        float a=-fabs(x-depth)*(1./(1.06*(sqrt(varince))*2.1));
+        //float density = exp(a);
+        densitytemp[i]=exp(a);
+        if (densitytemp[i]<0.3)
+            tempvector[i] = true;
+    }
 }
 
+float Variance (vector<v3_t> _3Dpts, const float depth , const int size_)
+{   
+    float* tempz= new float [size_];
+    float sum=0;
+    int num=0;
+    for (int i=0;i<size_;i++)
+    { 
+        if(_3Dpts[i].p[2]< 0 && _3Dpts[i].p[2]> -30 )
+        {
+            tempz[i]= (float)(_3Dpts[i].p[2]-depth)*(_3Dpts[i].p[2]-depth);
+            sum=sum+tempz[i];
+            num++;
+        }
+    }
+
+    return( sum *= 1. / num );
+
+}
+
+void DumpPointsToPly(char *output_directory, vector<v3_t> points
+                     ,int num_points) 
+{ 
+    static char ply_header[] = 
+    {"ply\n"
+        "format ascii 1.0\n"
+        "element face 0\n"
+        "property list uint8 int32 vertex_indices\n"
+        "element vertex %d\n"
+        "property float x\n"
+        "property float y\n"
+        "property float z\n"
+        "end_header\n"};
+    
+    char ply_out[256];
+    //sprintf(ply_out, "%s/%s", output_directory, filename);
+    
+    FILE *f = fopen(output_directory, "w");
+    
+    if (f == NULL) 
+    {
+        printf("Error opening file %s for writing\n", ply_out);
+        return;
+    }
+    
+    /* Print the ply header */
+    fprintf(f, ply_header,num_points);
+    
+    for (int i = 0; i < num_points; i++)
+    {
+        
+        /* Output the vertex */
+        fprintf(f, "%0.6f %0.6f %0.6f\n", points[i].p[0],points[i].p[1],points[i].p[2]);
+    }
+    
+    fclose(f);
+}
+bool CheckCheirality(v3_t pt)
+{
+    bool Cheirality=false;
+    if(pt.p[2]>0)
+        Cheirality=true;
+        return(Cheirality);
+}

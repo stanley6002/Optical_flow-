@@ -179,16 +179,17 @@ void LKFeatures::  LKFeaturesTracking ()
     
    if (UseOptical_flow)
    {
-       goodFeaturesToTrack(ImageGray1, corners, 400, 0.001, 10);
-       cornerSubPix( ImageGray1, corners, cv::Size(11,11), cv::Size(-1,-1), cv::TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 20, 0.001 ));
-       calcOpticalFlowPyrLK(ImageGray1, ImageGray2, corners, nextPts, status, err, cv::Size(30,30));
+       goodFeaturesToTrack(ImageGray1, corners, 400, 0.001, 7);
+       cornerSubPix( ImageGray1, corners, cv::Size(9,9) , cv::Size(-1,-1) , cv::TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 20, 0.000001 ));
+       calcOpticalFlowPyrLK(ImageGray1, ImageGray2, corners, nextPts, status, err, cv::Size(40,40));
    }
-    
    else
    {
-        goodFeaturesToTrack(ImageGray1,  LK_query_kpts,  600,0.001,5);
-        goodFeaturesToTrack(ImageGray2,  LK_train_kpts,  600,0.001,5);
-
+        goodFeaturesToTrack(ImageGray1,  LK_query_kpts, 400,0.001,9);
+        cornerSubPix( ImageGray1, LK_query_kpts, cv::Size(9,9) , cv::Size(-1,-1) , cv::TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 20, 0.000001 ));
+        goodFeaturesToTrack(ImageGray2,  LK_train_kpts, 400,0.001,9);
+        cornerSubPix( ImageGray2, LK_train_kpts, cv::Size(9,9) , cv::Size(-1,-1) , cv::TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 20, 0.000001 ));
+        
         LK_descriptor = new cv::BriefDescriptorExtractor(16);
 
         //// CONVERT 2D pointf to keypoint

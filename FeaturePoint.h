@@ -22,9 +22,13 @@ class FeaturePts
     friend class EpipolarGeometry;
 public:
     // temporary storage //
-    vector<v3_t> m_3Dpts;               
+    vector<v3_t> m_3Dpts; 
+    
     vector<v2_t> m_leftPts;  
     vector<v2_t> m_rightPts;
+    
+    // store find 3D position //
+    vector<v3_t> _3DLocation;
     
     int NumReproject;
     int FrameNumber;
@@ -120,12 +124,16 @@ public:
         m_3Dpts. insert(m_3Dpts.end(), V3Dpts.begin(), V3Dpts.end());  
     }  
     
-    void ConnectedVideoSequence(vector<v2_t> Previous_pts   /*previous frame*/, v2_t* Connected_pts, v2_t* Current /*current new frame*/, int Numpts);
+    void ConnectedVideoSequence(vector<v2_t> Previous_pts   /*previous frame*/, v2_t* Connected_pts, v2_t* Current /*current new frame*/, int Numpts, int FrameNumber);
    
     void CreateFeatureTrack(int* tempCurrent, int ConnectedPtsize, v2_t* Connected_pts, v2_t* Current_pts,int FrameNumber);
     
     void CollectFeatureTrackProjectPts(int Previous_ptsize , v2_t* Current_pts, int FrameNum);
-
+   
+    void UpdatedFeatureTrack(vector<v2_t> left_pts, vector<v2_t> right_pts, vector<v3_t>V3Dpts, int FrameNum);
+    
+    void CleanFeatureTrack();
+    
     FeaturePts ();
     ~ FeaturePts ();
 
