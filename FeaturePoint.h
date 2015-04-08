@@ -130,7 +130,7 @@ public:
     
     void CollectFeatureTrackProjectPts(int Previous_ptsize , v2_t* Current_pts, int FrameNum);
    
-    void UpdatedFeatureTrack(vector<v2_t> left_pts, vector<v2_t> right_pts, vector<v3_t>V3Dpts, int FrameNum);
+    void UpdatedFeatureTrack(vector<v2_t>& left_pts, vector<v2_t>& right_pts, vector<v3_t>& V3Dpts, int FrameNum);
     
     void CleanFeatureTrack();
     

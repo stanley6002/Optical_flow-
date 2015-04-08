@@ -87,13 +87,33 @@ void CameraPose::PrintKmatrix(int i)
 //   t3=-R23'*R12'*t12-R23'*t23
 //
 
-void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
+void CameraPose::Egomotion(double* R, double*T, FeaturePts FeaturePts)
 {
+//    int NumofReproject = FeaturePts.NumReproject;
+//    double P[12];
+//     v3_t* mv3ProjectPts= new v3_t [NumofReproject];
+//     v2_t* mv2ReprojectPts= new v2_t [NumofReproject];
+//       
+//    for(int i=0;i< NumofReproject;i++)
+//      {
+//        mv3ProjectPts[i]= FeaturePts.mv3ProjectionPts[i];
+//        mv2ReprojectPts[i]= FeaturePts.mv2ReprojectPts[i];
+//       
+//       }
+//
+//    double proj_estimation_threshold=8; 
+//    int r = find_projection_3x4_ransac(NumofReproject, mv3ProjectPts,mv2ReprojectPts ,P,200,proj_estimation_threshold);
+//    double R_app[9];
+//    double T_app[3];
+//    double K2[9];
+//    
+//    CameraParameter_Process(P,R_app,T_app,K2);
+    
     double R_relative[9];
     double T_relative[3];
     
-    memcpy(R_relative,EG.R_relative, 9* sizeof(double));
-    memcpy(T_relative,EG.t_relative, 3* sizeof(double));
+    memcpy(R_relative,R, 9* sizeof(double));
+    memcpy(T_relative,T, 3* sizeof(double));
     
     //int FrameNumber= SizeofPose()-1;  
     
@@ -110,13 +130,23 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
     
     PopRotcMatrix((int) mRcMatrix.size()-1, Rpre);   // load previous 
     PopTcMatrix( (int) mTcMatrix.size()-1,Tpre);
+    
+        
+    cout<<"Previous"<<endl;
+    cout<<Tpre[0]<<" "<<Tpre[1]<<" "<<Tpre[2]<<endl;
      
     matrix_product33(R_relative, Rpre, updated_rotation);           // RotCurrent * RotPrevious // 
+    //matrix_product33(Rpre, R_relative, updated_rotation); 
     matrix_transpose_product(3, 3, 3, 1, R_relative, Tpre , fin_t); // ( update  -Ri'*Center of previsous frame )
+    
     
     updated_t[0]=fin_t[0]+T_relative[0];  // add to -(Rij)'*tij
     updated_t[1]=fin_t[1]+T_relative[1];
     updated_t[2]=fin_t[2]+T_relative[2];
+    
+    //updated_t[0]=fin_t[0];  // add to -(Rij)'*tij
+    //updated_t[1]=fin_t[1];
+    //updated_t[2]=fin_t[2];
     
     cout<<"egomotion"<<endl;
     cout<<updated_t[0]<<" "<<updated_t[1]<<" "<<updated_t[2]<<endl;
@@ -134,11 +164,10 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
     
     TwoDalighment(NumofReproject, updated_rotation , updated_t , FeaturePts.mv3ProjectionPts, FeaturePts.mv2ReprojectPts, Tc_updated);
     
-    
-    double error2 =  CameraReprojectError(NumofReproject, updated_rotation, Tc_updated , FeaturePts.mv3ProjectionPts ,FeaturePts.mv2ReprojectPts ,  Kmatrix);
-    cout<<"after alightment"<<endl;
-    matrix_print(3,1,Tc_updated);
-    cout<<"reprojection error " <<error2/NumofReproject<<endl;
+    //double error2 =  CameraReprojectError(NumofReproject, updated_rotation, Tc_updated , FeaturePts.mv3ProjectionPts ,FeaturePts.mv2ReprojectPts ,  Kmatrix);
+    //cout<<"after alightment"<<endl;
+    //matrix_print(3,1,Tc_updated);
+    //cout<<"reprojection error " <<error2/NumofReproject<<endl;
     
     v3_t* mv3ProjectPts= new v3_t [NumofReproject];
     v2_t* mv2ReprojectPts= new v2_t [NumofReproject];
@@ -155,7 +184,7 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
     CameraRotRefine( NumofReproject ,mv3ProjectPts, mv2ReprojectPts , updated_rotation , Tc_updated , Kmatrix, UpdateR);
     
     //matrix_print(3,3,UpdateR);
-    //matrix_print(3,1,Tc_updated);
+    matrix_print(3,1,Tc_updated);
     
     double error3 =  CameraReprojectError(NumofReproject, UpdateR, Tc_updated , FeaturePts.mv3ProjectionPts ,FeaturePts.mv2ReprojectPts ,  Kmatrix);
    
@@ -166,8 +195,11 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
    
     LoadKMatrix(Kmatrix,(int) KMatrix.size()-1);
     LoadTcMatrix(Tc_updated);
-    LoadRotcMatrix(updated_rotation);
-   
+    LoadRotcMatrix(UpdateR);
+    
+    LoadTriKmatrix(Kmatrix,(int) KMatrix.size()-1);
+    LoadTriTcmatrix(Tc_updated);
+    LoadTriRotmatrix(UpdateR);
     
     delete [] mv3ProjectPts;
     delete [] mv2ReprojectPts;    
@@ -207,7 +239,7 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
         
       matrix_product(3, 3, 3, 1, Rott, X3D, q);
         
-      q[0]-=R_t[0]; q[1]-=R_t[1]; q[2]-=R_t[2];    
+      q[0] -=R_t[0]; q[1] -=R_t[1]; q[2] -=R_t[2];    
       
       _3Dpt[i].p[0]=q[0]; _3Dpt[i].p[1]=q[1]; _3Dpt[i].p[2]=q[2];
         
@@ -220,14 +252,21 @@ void CameraPose::Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts)
     
     double Parameter_vec[3];
     
-    DeltaVector_Ransac( _2Dpt, _3Dpt, NumofReproject , Parameter_vec, 50 , 0.1);
+    DeltaVector_Ransac( _2Dpt, _3Dpt, NumofReproject , Parameter_vec, 150 , 0.1);
     
+    double TR[3];
     matrix_transpose(3, 3, Rott, Rott_transpose);
     matrix_product331(Rott_transpose,Parameter_vec , R_t_T);
-        
+    
+    //matrix_product331(Rott_transpose,Tt , TR);    
+    
     trans[0]= Tt[0]+ R_t_T[0];
     trans[1]= Tt[1]+ R_t_T[1];
     trans[2]= Tt[2]+ R_t_T[2];
+    
+    //trans[0]= TR[0]+ R_t_T[0];
+    //trans[1]= TR[1]+ R_t_T[1];
+    //trans[2]= TR[2]+ R_t_T[2];
     
     memcpy(Tcmatrix, trans, 3*sizeof(double));
     //cout<<"alightment result"<<endl;
@@ -401,49 +440,50 @@ double CameraPose :: TriangulationN_Frames(FeaturePts& Pts)
     
     for(int i=0;i< NumPts;i++)
     {
-    
-       int num_frame= (int)Pts.mv2_frame[i].size();  // read number of frame in the list //
-       v2_t *pv = new v2_t[num_frame];
-       double *Rs= new double [9*  num_frame];
-       double *ts = new double[3 * num_frame];
-    
-     for (int j=0; j<num_frame ;j++)
-        // for (int i=0; i<2;i++)
-       {
-        int N = (int) Pts.mv2_frame[i][j];
-        double Pt3[3]= {Pts.mv2_location[i][j].p[0], Pts.mv2_location[i][j].p[1], 1.0};
-        double Translation_Scaled [3];
-        double Translated [3];
-        double K [9];
-        double Kinv [9];
-        double Rotation[9];
-        double Tc[3];
         
-        PopKMattix(N, K);  
-        /* Get_focal_length* i is ith camera's parameters*/ 
-        //cout<<"T vector"<<endl;       
+        int num_frame= (int)Pts.mv2_frame[i].size();  // read number of frame in the list //
+        v2_t *pv = new v2_t[num_frame];
+        double *Rs= new double [9*  num_frame];
+        double *ts = new double[3 * num_frame];
         
-        matrix_invert(3, K, Kinv);
-        double p_n[3];
+        for (int j=0; j<num_frame ;j++)
+            // for (int i=0; i<2;i++)
+        {
+            int N = (int) Pts.mv2_frame[i][j];
+            double Pt3[3]= {Pts.mv2_location[i][j].p[0], Pts.mv2_location[i][j].p[1], 1.0};
+            double Translation_Scaled [3];
+            double Translated [3];
+            double K [9];
+            double Kinv [9];
+            double Rotation[9];
+            double Tc[3];
+            
+            PopKMattix(N, K);  
+            /* Get_focal_length* i is ith camera's parameters*/ 
+            //cout<<"T vector"<<endl;       
+            
+            matrix_invert(3, K, Kinv);
+            double p_n[3];
+            
+            matrix_product(3, 3, 3, 1, Kinv, Pt3, p_n);
+            pv[j]= v2_new(-p_n[0],-p_n[1]);
+            
+            PopRotcMatrix(N, Rotation);
+            
+            memcpy(Rs + 9 * j, Rotation, 9 * sizeof(double));
+            
+            PopTcMatrix(N,Tc);
+            matrix_product(3,3,3,1,Rotation,Tc,Translated);
+            matrix_scale(3,1,Translated,-1.0,Translation_Scaled); 
+            memcpy(ts + 3 * j,Translation_Scaled, 3 * sizeof(double));
+            
+        }
         
-        matrix_product(3, 3, 3, 1, Kinv, Pt3, p_n);
-        pv[j]= v2_new(-p_n[0],-p_n[1]);
+        double error=0;
         
-        PopRotcMatrix(N, Rotation);
-
-        memcpy(Rs + 9 * j, Rotation, 9 * sizeof(double));
-       
-        PopTcMatrix(N,Tc);
-        matrix_product(3,3,3,1,Rotation,Tc,Translated);
-        matrix_scale(3,1,Translated,-1.0,Translation_Scaled); 
-        memcpy(ts + 3 * j,Translation_Scaled, 3 * sizeof(double));
+        v3_t pt = triangulate_n(num_frame, pv, Rs, ts, &error);
         
-    }
-    
-    double error=0;
-    
-    v3_t pt = triangulate_n(num_frame, pv, Rs, ts, &error);
-    _3Dpts.push_back(pt); 
+       _3Dpts.push_back(pt); 
         
       free(Rs);
       free(ts);
@@ -468,10 +508,11 @@ double CameraPose :: TriangulationN_Frames(FeaturePts& Pts)
           shift_index++;
         }   
      }
-    Pts. m_3Dpts.swap(_3Dpts);
-    DumpPointsToPly("/Users/chih-hsiangchang/Desktop/Archive/result.ply", Pts. m_3Dpts
-                    ,(NumPts-shift_index));
+    int indx= (int)_3Dpts.size();
     
+    Pts._3DLocation.insert(Pts._3DLocation.end(),_3Dpts.begin(),_3Dpts.end());
+    Pts.m_3Dpts.swap(_3Dpts);
+      
     cout<<"test"<<endl;
     //return(_2D_error);
 }
@@ -621,3 +662,5 @@ bool CheckCheirality(v3_t pt)
         Cheirality=true;
         return(Cheirality);
 }
+
+

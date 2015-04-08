@@ -63,6 +63,49 @@ class CameraPose
     vector <TMat>   mTcMatrix;
     vector <Kmat>   KMatrix;
     
+    vector<RotMat>mtriRotmatrix;
+    vector<TMat>mtriTcmatrix;
+    vector<Kmat>mtriKmatrix;
+    
+    inline void LoadTriRotmatrix(double* R )
+    {
+        RotMat tempR;
+        memcpy( tempR.n , R, 9* sizeof(double));
+        mtriRotmatrix.push_back(tempR);
+    }
+    
+    inline void LoadTriTcmatrix(double* T)
+    {
+        TMat tempT;
+        memcpy( tempT.n , T, 3* sizeof(double));
+        mtriTcmatrix.push_back(tempT);
+    }
+    
+    inline void LoadTriKmatrix(double* K, int i)
+    {
+        mtriKmatrix[i].n[0]= K[0];  mtriKmatrix[i].n[1]= K[1];  mtriKmatrix[i].n[2]= K[2];
+        mtriKmatrix[i].n[3]= K[3];  mtriKmatrix[i].n[4]= K[4];  mtriKmatrix[i].n[5]= K[5];
+        mtriKmatrix[i].n[6]= K[6];  mtriKmatrix[i].n[7]= K[7];  mtriKmatrix[i].n[8]= K[8];  
+    }
+
+    inline void PopTriKMattix(int i, double*K)
+    {
+        memcpy(K,mtriKmatrix[i].n, 9*sizeof(double));
+    }
+    
+    inline void PopTriRotcMatrix(int i, double* R)
+    {
+        memcpy(R,mtriRotmatrix[i].n, 9*sizeof(double));
+    }
+    
+    inline void PopTriTcMatrix(int i, double* T)
+    {
+        memcpy(T,mtriTcmatrix[i].n,3*sizeof(double));
+    }
+
+    
+    
+    
     inline void InitializeFirstTwoKMatrix(double* K1Matrix, double*K2Matrix)
     {
         Kmat temp1 ;
@@ -70,9 +113,11 @@ class CameraPose
         
         memcpy( temp1.n , K1Matrix, 9* sizeof(double));
         KMatrix.push_back(temp1);
-
+        mtriKmatrix.push_back(temp1);
+        
         memcpy( temp2.n , K2Matrix, 9* sizeof(double));
         KMatrix.push_back(temp2);
+        mtriKmatrix.push_back(temp2);
     }
     
     inline void InitializeKMatrix (int Foucslength)
@@ -84,6 +129,7 @@ class CameraPose
         temp.n[6]= 0.0 ,                 temp.n[7]= 0.0               , temp.n[8]= 1.0;
     
         KMatrix.push_back(temp);
+        mtriKmatrix.push_back(temp);
     }
     
     inline void LoadRotcMatrix(double* R )
@@ -110,8 +156,22 @@ class CameraPose
         LoadRotcMatrix(R1);
         LoadRotcMatrix(R_relative);
         
+        LoadTriRotmatrix(R1);
+        LoadTriRotmatrix(R_relative);
+        
         LoadTcMatrix(T1);
         LoadTcMatrix(T_relative);
+        
+        LoadTriTcmatrix(T1);
+        LoadTriTcmatrix(T_relative);
+    }
+    
+    inline void RemoveTri()
+    {
+    
+        mtriRotmatrix.erase(mtriRotmatrix.begin(), mtriRotmatrix.begin()+1);
+        mtriTcmatrix.erase(mtriTcmatrix.begin(), mtriTcmatrix.begin()+1);
+        mtriKmatrix.erase(mtriKmatrix.begin(), mtriKmatrix.begin()+1);
     }
     
     inline void PopKMattix(int i, double*K)
@@ -146,7 +206,7 @@ class CameraPose
         return((int) mRcMatrix.size());
     }
 
-    void Egomotion(EpipolarGeometry EG, FeaturePts FeaturePts);
+    void Egomotion(double *R_relative, double* T_relative , FeaturePts FeaturePts);
     
     void PrintRotmatrix(int i);
     

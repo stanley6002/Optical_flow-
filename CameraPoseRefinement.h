@@ -32,6 +32,20 @@ static void CameraProjectPoint(double *aj, double *bi,
 //                             double *w /*Rot parameters*/ , double * b /*3Dpts*/ , double *p/*projection*/);
 
 void Sing_rot_update(double *R, double *w, double *Rnew);
+    
+    
+    static void projection_residual(const int *m, const int *n, double *x, 
+                                    double *fvec, double *iflag) ;
+    
+    int find_projection_3x4_nonlinear(int num_pts, v3_t *points, v2_t *projs, 
+                                      double *Pin, double *Pout) ;
+    
+    int find_projection_3x4_ransac(int num_pts, v3_t *points, v2_t *projs, 
+                                   double *P, 
+                                   int ransac_rounds, double ransac_threshold) ;    
+    void FixIntrinsics(double *P, double *K, double *R, double *t) ;
+    void CameraParameter_Process(double*P, double *Rinit, double *tinit,double *K/* frame number*/ );
+    
 
 #ifdef __cplusplus
 }

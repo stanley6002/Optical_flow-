@@ -62,14 +62,15 @@ void FeaturePts::CollectFeatureTrackProjectPts(int Previous_ptsize , v2_t* Curre
             mv2_frame[i].push_back(FrameNum);
             mv2ReprojectPts.push_back(Current_pts[index]);    // collect 2D reprojection pts 
             mv3ProjectionPts.push_back(m_3Dpts[i]);           // collect  
+            
         }
     }
     
     // Update the number of reprojection points
     
     this->NumReproject = (int) mv3ProjectionPts.size();
-    // cout<< " Projection size "<<  mv3ProjectionPts.size()<<endl;
-    // cout<< " ReProjection size "<< mv2ReprojectPts.size()<<endl;
+     cout<< " Projection size "<<  mv3ProjectionPts.size()<<endl;
+     cout<< " ReProjection size "<< mv2ReprojectPts.size()<<endl;
 }
  
 void FeaturePts::ConnectedVideoSequence(vector<v2_t> Previous_pts   /*previous frame*/, v2_t* Connected_pts /*current new frame*/,v2_t* Current_pts, int Numpts , int FrameNumber)
@@ -114,6 +115,7 @@ void FeaturePts::ConnectedVideoSequence(vector<v2_t> Previous_pts   /*previous f
                             tempCurrent[j] =NUM;
                             tempPrevious[i]=NUM;
                             
+                            cout<<"collected "<<endl;
                             break;
                       }
                 }    
@@ -150,7 +152,7 @@ void FeaturePts::ConnectedVideoSequence(vector<v2_t> Previous_pts   /*previous f
     delete [] tempCurrent;
     delete [] tempPrevious;
 }
-void FeaturePts:: UpdatedFeatureTrack(vector<v2_t> left_pts, vector<v2_t> right_pts, vector<v3_t>V3Dpts, int FrameNum)
+void FeaturePts:: UpdatedFeatureTrack(vector<v2_t>& left_pts, vector<v2_t>& right_pts, vector<v3_t>& V3Dpts, int FrameNum)
 {
 
     int size_= (int) mv2_frame.size();
@@ -159,25 +161,42 @@ void FeaturePts:: UpdatedFeatureTrack(vector<v2_t> left_pts, vector<v2_t> right_
         int index = (int) mv2_frame[i].size()-1;
          if (mv2_frame[i][index]== FrameNum)
           {
-            // pick up 2D and 3D points
+              // pick up 2D and 3D points
+          
           v2_t leftpt  =mv2_location[i][index-1];
           v2_t rightpt =mv2_location[i][index];
           v3_t V3pt    =m_3Dpts[i];
           left_pts.push_back(leftpt);
           right_pts.push_back(rightpt);    
           V3Dpts.push_back(V3pt);
+         
           }
           
     }
-    //cout<<left_pts.size()<<" "<<right_pts.size()<<" "<<V3Dpts.size()<<endl;
+    cout<< left_pts.size()<<" "<<right_pts.size()<<endl;
 }
 void FeaturePts::CleanFeatureTrack()
 {
     vector<v2_t> leftPtsEmpty;
     vector<v2_t> rightPtsEmpty;
     vector<v3_t> _3DptsEmpty;
+    vector<vector<int> > mv2_frameEmpty;
+    vector<vector<v2_t> > mv2_locationEmpty;
+    
+    vector<v2_t> mv2ReprojectPtsEmpty;
+    vector<v3_t> mv3ProjectionPtsEmpty;
+    
     
     m_leftPts.swap (leftPtsEmpty);
     m_rightPts.swap(rightPtsEmpty);
     m_3Dpts.swap(_3DptsEmpty);
+    
+    mv2_location.swap(mv2_locationEmpty);   // show 2D point locations
+    mv2_frame.swap(mv2_frameEmpty);     // show frame list 
+
+    mv2ReprojectPts.swap(mv2ReprojectPtsEmpty); 
+    mv3ProjectionPts.swap(mv3ProjectionPtsEmpty);
+    
+    this-> StackIndex= NULL;
+    
 }

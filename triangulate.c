@@ -240,10 +240,10 @@ v3_t triangulate_n(int num_points,
     //printf("[triangulate_n] Error [before polishing]: %0.3e\n", error);
     
     /* Run a non-linear optimization to refine the result */
-    //global_num_points = num_points;
-    //global_ps = p;
-    //global_Rs = R;  global_ts = t;
-    //lmdif_driver(triangulate_n_residual, num_eqs, num_vars, x, 1.0e-8);
+    global_num_points = num_points;
+    global_ps = p;
+    global_Rs = R;  global_ts = t;
+    lmdif_driver(triangulate_n_residual, num_eqs, num_vars, x, 1.0e-8);
 
 
     r = v3_new(x[0], x[1], x[2]);
@@ -852,458 +852,458 @@ static int global_num_pts;
 static v3_t *global_points;
 static v2_t *global_projs;
 
-static void projection_residual(const int *m, const int *n, double *x, 
-                                double *fvec, double *iflag) 
-{
-    int i;
-    
-    double P[12];
-    memcpy(P, x, sizeof(double) * 11);
-    P[11] = 1.0;
-    
-    for (i = 0; i < global_num_pts; i++) {
-        double pt[4] = { Vx(global_points[i]), 
-            Vy(global_points[i]), 
-            Vz(global_points[i]), 1.0 };
-        
-        double pr[3];
-        double dx, dy;
-        
-        matrix_product341(P, pt, pr);
-        // EDIT!!
-        pr[0] /= -pr[2];
-        pr[1] /= -pr[2];
-	    
-        dx = pr[0] - Vx(global_projs[i]);
-        dy = pr[1] - Vy(global_projs[i]);
-        
-        fvec[2 * i + 0] = dx;
-        fvec[2 * i + 1] = dy;
-    }
-}
-
+//static void projection_residual(const int *m, const int *n, double *x, 
+//                                double *fvec, double *iflag) 
+//{
+//    int i;
+//    
+//    double P[12];
+//    memcpy(P, x, sizeof(double) * 11);
+//    P[11] = 1.0;
+//    
+//    for (i = 0; i < global_num_pts; i++) {
+//        double pt[4] = { Vx(global_points[i]), 
+//            Vy(global_points[i]), 
+//            Vz(global_points[i]), 1.0 };
+//        
+//        double pr[3];
+//        double dx, dy;
+//        
+//        matrix_product341(P, pt, pr);
+//        // EDIT!!
+//        pr[0] /= -pr[2];
+//        pr[1] /= -pr[2];
+//	    
+//        dx = pr[0] - Vx(global_projs[i]);
+//        dy = pr[1] - Vy(global_projs[i]);
+//        
+//        fvec[2 * i + 0] = dx;
+//        fvec[2 * i + 1] = dy;
+//    }
+//}
+//
 /* Solve for a 3x4 projection matrix, given a set of 3D points and 2D
  * projections using non-linear optimization */
-int find_projection_3x4_nonlinear(int num_pts, v3_t *points, v2_t *projs, 
-                                  double *Pin, double *Pout) 
-{
-    if (num_pts < 6) {
-        printf("[find_projection_3x4_nonlinear] Need at least 6 points!\n");
-        return -1;
-    } else {
-        int num_eqns = 2 * num_pts;
-        int num_vars = 11;
-        double x[11];
-        
-        global_num_pts = num_pts;
-        global_points = points;
-        global_projs = projs;
-         // Pin[11]=1.0;
-        memcpy(x, Pin, sizeof(double) * 11);
-      
-        //lmdif_driver(projection_residual, num_eqns, num_vars, x, 1.0e-6);
-        lmdif_driver(projection_residual, num_eqns, num_vars, x, 1.0e-12);
-       memcpy(Pout, x, sizeof(double) * 11);
-       Pout[11] = 1.0;
-        
-        return 0;
-    }
-}
+//int find_projection_3x4_nonlinear(int num_pts, v3_t *points, v2_t *projs, 
+//                                  double *Pin, double *Pout) 
+//{
+//    if (num_pts < 6) {
+//        printf("[find_projection_3x4_nonlinear] Need at least 6 points!\n");
+//        return -1;
+//    } else {
+//        int num_eqns = 2 * num_pts;
+//        int num_vars = 11;
+//        double x[11];
+//        
+//        global_num_pts = num_pts;
+//        global_points = points;
+//        global_projs = projs;
+//         // Pin[11]=1.0;
+//        memcpy(x, Pin, sizeof(double) * 11);
+//      
+//        //lmdif_driver(projection_residual, num_eqns, num_vars, x, 1.0e-6);
+//        lmdif_driver(projection_residual, num_eqns, num_vars, x, 1.0e-12);
+//       memcpy(Pout, x, sizeof(double) * 11);
+//       Pout[11] = 1.0;
+//        
+//        return 0;
+//    }
+//}
 
 
 /* Solve for a 3x4 projection matrix using RANSAC, given a set of 3D
  * points and 2D projections */
-int find_projection_3x4_ransac(int num_pts, v3_t *points, v2_t *projs, 
-                               double *P, 
-                               int ransac_rounds, double ransac_threshold) 
-{
-    if (num_pts < 6) {
-        printf("[find_projection_3x4_ransac] Error: need at least 6 points!\n");
-        return -1;
-    } else {
-#define MIN_PTS 6
-        // const int min_pts = 6;
-        int *inliers = (int *) malloc(sizeof(int) * num_pts);
-        int indices[MIN_PTS];
-        int round, i, j;
-        int max_inliers = 0;
-        double max_error = 0.0;
-        double Pbest[12];
-        int num_inliers = 0, num_inliers_new = 0;
-        v3_t *pts_final = NULL;
-        v2_t *projs_final = NULL;
-        double Plinear[12];
-        
-        double Rinit[9];
-        double triangular[9], orthogonal[9];
-        int neg, sign;
-        
-        double thresh_sq = ransac_threshold * ransac_threshold;
-        double error = 0.0;
-        
-        int num_inliers_polished = 0;
-        
-        for (round = 0; round < ransac_rounds; round++) {
-            v3_t pts_inner[MIN_PTS];
-            v2_t projs_inner[MIN_PTS];
-            double Ptmp[12];
-            
-            num_inliers = 0;
-            for (i = 0; i < MIN_PTS; i++) {
-                int redo = 0;
-                int idx;
-                int redo_count = 0;
-                
-                do {
-                    if (redo_count > 50000) {
-                        free(inliers);
-                        return -1;
-                    }
-                    
-                    idx = rand() % num_pts;
-                    
-                    redo = 0;
-                    for (j = 0; j < i; j++) {
-                        if (idx == indices[j]) {
-                            redo = 1;
-                            break;
-                        } else if (Vx(projs[idx]) == Vx(projs[indices[j]]) && 
-                                   Vy(projs[idx]) == Vy(projs[indices[j]])) {
-                            redo = 1;
-                        }
-                    }
-                    
-                    redo_count++;
-                } while(redo);
-                
-                indices[i] = idx;
-                pts_inner[i] = points[idx];
-                projs_inner[i] = projs[idx];
-            }
-            
-            /* Solve for the parameters */
-            find_projection_3x4(MIN_PTS, pts_inner, projs_inner, Ptmp);
-            
-            #if 1
-            	    /* Fix the sign on the P matrix */
-                        memcpy(Rinit + 0, Ptmp + 0, 3 * sizeof(double));
-                        memcpy(Rinit + 3, Ptmp + 4, 3 * sizeof(double));
-                        memcpy(Rinit + 6, Ptmp + 8, 3 * sizeof(double));
-            
-                        dgerqf_driver(3, 3, Rinit, triangular, orthogonal);	    
-        
-            	    /* Check the parity along the diagonal */
-            	    neg = 
-            		(triangular[0] < 0.0) + 
-            		(triangular[4] < 0.0) + 
-            		(triangular[8] < 0.0);
-            
-            	    if ((neg % 2) == 1) {
-            		sign = -1;
-            	    } else {
-            		sign = 1;
-            	    }
-            #endif
-            
-            /* Count the number of inliers */
-            error = 0.0;
-            for (i = 0; i < num_pts; i++) {
-                double pt[4] = { Vx(points[i]), 
-                    Vy(points[i]), 
-                    Vz(points[i]), 1.0 };
-                double pr[3];
-                double dx, dy, dist;
-                
-                matrix_product341(Ptmp, pt, pr);
-                
-                /* Check cheirality */
-                // EDIT!!!
-                if (sign * pr[2] > 0.0) 
-                    continue;
-                
-                // EDIT!!!
-                pr[0] /= -pr[2];
-                pr[1] /= -pr[2];
-                
-                dx = pr[0] - Vx(projs[i]);
-                dy = pr[1] - Vy(projs[i]);
-                
-                dist = dx * dx + dy * dy;
-                
-                if (dist < thresh_sq) {
-                    inliers[num_inliers] = i;
-                    num_inliers++;
-                    error += dist;
-                }
-                
-            }
-            
-            
-            if (num_inliers > max_inliers) {
-                memcpy(Pbest, Ptmp, sizeof(double) * 12);
-                max_error = error;
-                max_inliers = num_inliers;
-            }
-        }
-        
-        memcpy(P, Pbest, sizeof(double) * 12);
-        
-        printf("[find_projection_3x4_ransac] num_inliers = %d (out of %d)\n",
-               max_inliers, num_pts);	
-        printf("[find_projection_3x4_ransac] Avg error = %0.3f\n",
-               (max_error/num_pts));
-        printf("[find_projection_3x4_ransac] error = %0.3f\n", 
-               sqrt(max_error / max_inliers));
-        
-        if (max_inliers < 6) {
-            printf("[find_projection_3x4_ransac] "
-                   "Too few inliers to continue.\n");
-            
-            free(inliers);
-            
-            return -1;
-        }
-        
-        /* Do the final least squares minimization */
-        
-        #if 1
-        	/* Fix the sign on the P matrix */
-        	memcpy(Rinit + 0, Pbest + 0, 3 * sizeof(double));
-        	memcpy(Rinit + 3, Pbest + 4, 3 * sizeof(double));
-        	memcpy(Rinit + 6, Pbest + 8, 3 * sizeof(double));
-        
-        	dgerqf_driver(3, 3, Rinit, triangular, orthogonal);	    
-        
-        	/* Check the parity along the diagonal */
-        	neg = 
-        	    (triangular[0] < 0.0) + 
-        	    (triangular[4] < 0.0) + 
-        	    (triangular[8] < 0.0);
-        
-        	if ((neg % 2) == 1) {
-        	    sign = -1;
-        	} else {
-        	    sign = 1;
-        	}
-       #endif
-        
-        num_inliers = 0;
-        pts_final = (v3_t *) malloc(sizeof(v3_t) * max_inliers);
-        projs_final = (v2_t *) malloc(sizeof(v2_t) * max_inliers);
-        
-        for (i = 0; i < num_pts; i++) {
-            double pt[4] = { Vx(points[i]), 
-                Vy(points[i]), 
-                Vz(points[i]), 1.0 };
-            
-            double pr[3];
-            double dx, dy, dist;
-            
-            matrix_product341(Pbest, pt, pr);
-            
-            /* Check cheirality */
-            // EDIT!!!
-            if (sign * pr[2] > 0.0) 
-                continue;
-            
-            // EDIT!!!
-            pr[0] /= -pr[2];
-            pr[1] /= -pr[2];
-            
-            dx = pr[0] - Vx(projs[i]);
-            dy = pr[1] - Vy(projs[i]);
-            dist = dx * dx + dy * dy;
-            if (dist < thresh_sq) 
-            {
-                pts_final[num_inliers] = points[i];
-                projs_final[num_inliers] = projs[i];
-                num_inliers++;
-            }
-        }
-        
-        if (num_inliers != max_inliers) {
-            printf("[find_projection_3x4_ransac] Error! There was a miscount "
-                   "somewhere: (%d != %d)\n", num_inliers, max_inliers);
-        }
-        
-        find_projection_3x4(max_inliers, pts_final, projs_final, Plinear);
-        
-        #if 1
-        	/* Fix the sign on the P matrix */
-        	memcpy(Rinit + 0, Plinear + 0, 3 * sizeof(double));
-        	memcpy(Rinit + 3, Plinear + 4, 3 * sizeof(double));
-        	memcpy(Rinit + 6, Plinear + 8, 3 * sizeof(double));
-        
-        	dgerqf_driver(3, 3, Rinit, triangular, orthogonal);	    
-        	
-        	/* Check the parity along the diagonal */
-        	neg = 
-        	    (triangular[0] < 0.0) + 
-        	    (triangular[4] < 0.0) + 
-        	    (triangular[8] < 0.0);
-        
-        	if ((neg % 2) == 1) {
-        	    sign = -1;
-        	} else {
-        	    sign = 1;
-        	}
-        #endif
-        
-        for (i = 0; i < num_pts; i++) {
-            double pt[4] = 
-            { Vx(points[i]), Vy(points[i]), Vz(points[i]), 1.0 };
-            double pr[3];
-            double dx, dy, dist;
-            
-            matrix_product341(Plinear, pt, pr);
-            
-            // EDIT!!!
-            if (sign * pr[2] > 0.0)
-                continue;
-            
-            // EDIT!!!
-            pr[0] /= -pr[2];
-            pr[1] /= -pr[2];
-            
-            dx = pr[0] - Vx(projs[i]);
-            dy = pr[1] - Vy(projs[i]);
-            
-            dist = dx * dx + dy * dy;
-            
-            if (dist < thresh_sq) {
-                num_inliers_new++;
-            }
-        }
-        
-        if (num_inliers_new < max_inliers) 
-        {
-            printf("[find_projection_3x4_ransac] Reverting to old solution\n");
-            memcpy(Plinear, Pbest, 12 * sizeof(double));
-    	}
-        printf("Best matrix (pre-opt):\n");
-        matrix_print(3, 4, Plinear);
-        error = 0.0;
-        for (i = 0; i < max_inliers; i++) {
-            double pt[4] = 
-            { Vx(pts_final[i]), Vy(pts_final[i]), Vz(pts_final[i]), 1.0 };
-            double pr[3];
-            double dx, dy, dist;
-            
-            matrix_product341(Plinear, pt, pr);
-            pr[0] /= pr[2];
-            pr[1] /= pr[2];
-            
-            dx = pr[0] - Vx(projs_final[i]);
-            dy = pr[1] - Vy(projs_final[i]);
-            
-            dist = dx * dx + dy * dy;
-            
-            error += dist;
-        }
-        
-        printf("Old error: %0.3e\n", sqrt(error / max_inliers));
-        
-        /* Polish the result */
-        if (max_inliers >= 6) {
-            int num_inliers_polished = 0;
-            find_projection_3x4_nonlinear(max_inliers, pts_final, projs_final,
-                                          Plinear, P);
-            
-            #if 1
-                       /* Fix the sign on the P matrix */
-                        memcpy(Rinit + 0, P + 0, 3 * sizeof(double));
-                        memcpy(Rinit + 3, P + 4, 3 * sizeof(double));
-                        memcpy(Rinit + 6, P + 8, 3 * sizeof(double));
-            
-                        dgerqf_driver(3, 3, Rinit, triangular, orthogonal);	    
-                        
-                        /* Check the parity along the diagonal */
-                        neg = 
-                            (triangular[0] < 0.0) + 
-                            (triangular[4] < 0.0) + 
-                            (triangular[8] < 0.0);
-            
-                        if ((neg % 2) == 1) {
-                            sign = -1;
-                        } else {
-                            sign = 1;
-                        }
-            #endif
-            
-            /* Check that the number of inliers hasn't gone down */
-            num_inliers_polished = 0;
-            for (i = 0; i < num_pts; i++) {
-                double pt[4] = 
-                { Vx(points[i]), Vy(points[i]), Vz(points[i]), 1.0 };
-                double pr[3];
-                double dx, dy, dist;
-                
-                matrix_product341(P, pt, pr);
-                
-                // EDIT!!!
-                if (sign * pr[2] > 0.0)
-                    continue;
-                
-                // EDIT!!!
-                pr[0] /= -pr[2];
-                pr[1] /= -pr[2];
-                
-                dx = pr[0] - Vx(projs[i]);
-                dy = pr[1] - Vy(projs[i]);
-                
-                dist = dx * dx + dy * dy;
-                
-                if (dist < thresh_sq) {
-                    num_inliers_polished++;
-                }
-           }
-            
-            if (num_inliers_polished < max_inliers) {
-                printf("Decreased number of inliers (%d < %d), reverting\n",
-                      num_inliers_polished, max_inliers);
-                
-                memcpy(P, Plinear, sizeof(double) * 12);		
-            }
-        } 
-        else 
-        {
-            memcpy(P, Plinear, sizeof(double) * 12);
-    }
-        
-        printf("Best matrix (post-opt):\n");
-        matrix_print(3, 4, P);
-        
-        error = 0.0;
-        for (i = 0; i < max_inliers; i++) {
-            double pt[4] = 
-            { Vx(pts_final[i]), Vy(pts_final[i]), Vz(pts_final[i]), 1.0 };
-            double pr[3];
-            double dx, dy, dist;
-            
-            matrix_product341(P, pt, pr);
-            
-            // EDIT!!!
-            pr[0] /= -pr[2];
-            pr[1] /= -pr[2];
-            
-            dx = pr[0] - Vx(projs_final[i]);
-            dy = pr[1] - Vy(projs_final[i]);
-            
-            dist = dx * dx + dy * dy;
-            
-            error += dist;
-        }
-        
-        printf("New error: %0.3e\n", sqrt(error / max_inliers));
-        
-        free(inliers);
-        free(pts_final);
-        free(projs_final);
-        
-        return max_inliers;
-    }
-#undef MIN_PTS
-} 
+//int find_projection_3x4_ransac(int num_pts, v3_t *points, v2_t *projs, 
+//                               double *P, 
+//                               int ransac_rounds, double ransac_threshold) 
+//{
+//    if (num_pts < 6) {
+//        printf("[find_projection_3x4_ransac] Error: need at least 6 points!\n");
+//        return -1;
+//    } else {
+//#define MIN_PTS 6
+//        // const int min_pts = 6;
+//        int *inliers = (int *) malloc(sizeof(int) * num_pts);
+//        int indices[MIN_PTS];
+//        int round, i, j;
+//        int max_inliers = 0;
+//        double max_error = 0.0;
+//        double Pbest[12];
+//        int num_inliers = 0, num_inliers_new = 0;
+//        v3_t *pts_final = NULL;
+//        v2_t *projs_final = NULL;
+//        double Plinear[12];
+//        
+//        double Rinit[9];
+//        double triangular[9], orthogonal[9];
+//        int neg, sign;
+//        
+//        double thresh_sq = ransac_threshold * ransac_threshold;
+//        double error = 0.0;
+//        
+//        int num_inliers_polished = 0;
+//        
+//        for (round = 0; round < ransac_rounds; round++) {
+//            v3_t pts_inner[MIN_PTS];
+//            v2_t projs_inner[MIN_PTS];
+//            double Ptmp[12];
+//            
+//            num_inliers = 0;
+//            for (i = 0; i < MIN_PTS; i++) {
+//                int redo = 0;
+//                int idx;
+//                int redo_count = 0;
+//                
+//                do {
+//                    if (redo_count > 50000) {
+//                        free(inliers);
+//                        return -1;
+//                    }
+//                    
+//                    idx = rand() % num_pts;
+//                    
+//                    redo = 0;
+//                    for (j = 0; j < i; j++) {
+//                        if (idx == indices[j]) {
+//                            redo = 1;
+//                            break;
+//                        } else if (Vx(projs[idx]) == Vx(projs[indices[j]]) && 
+//                                   Vy(projs[idx]) == Vy(projs[indices[j]])) {
+//                            redo = 1;
+//                        }
+//                    }
+//                    
+//                    redo_count++;
+//                } while(redo);
+//                
+//                indices[i] = idx;
+//                pts_inner[i] = points[idx];
+//                projs_inner[i] = projs[idx];
+//            }
+//            
+//            /* Solve for the parameters */
+//            find_projection_3x4(MIN_PTS, pts_inner, projs_inner, Ptmp);
+//            
+//            #if 1
+//            	    /* Fix the sign on the P matrix */
+//                        memcpy(Rinit + 0, Ptmp + 0, 3 * sizeof(double));
+//                        memcpy(Rinit + 3, Ptmp + 4, 3 * sizeof(double));
+//                        memcpy(Rinit + 6, Ptmp + 8, 3 * sizeof(double));
+//            
+//                        dgerqf_driver(3, 3, Rinit, triangular, orthogonal);	    
+//        
+//            	    /* Check the parity along the diagonal */
+//            	    neg = 
+//            		(triangular[0] < 0.0) + 
+//            		(triangular[4] < 0.0) + 
+//            		(triangular[8] < 0.0);
+//            
+//            	    if ((neg % 2) == 1) {
+//            		sign = -1;
+//            	    } else {
+//            		sign = 1;
+//            	    }
+//            #endif
+//            
+//            /* Count the number of inliers */
+//            error = 0.0;
+//            for (i = 0; i < num_pts; i++) {
+//                double pt[4] = { Vx(points[i]), 
+//                    Vy(points[i]), 
+//                    Vz(points[i]), 1.0 };
+//                double pr[3];
+//                double dx, dy, dist;
+//                
+//                matrix_product341(Ptmp, pt, pr);
+//                
+//                /* Check cheirality */
+//                // EDIT!!!
+//                if (sign * pr[2] > 0.0) 
+//                    continue;
+//                
+//                // EDIT!!!
+//                pr[0] /= -pr[2];
+//                pr[1] /= -pr[2];
+//                
+//                dx = pr[0] - Vx(projs[i]);
+//                dy = pr[1] - Vy(projs[i]);
+//                
+//                dist = dx * dx + dy * dy;
+//                
+//                if (dist < thresh_sq) {
+//                    inliers[num_inliers] = i;
+//                    num_inliers++;
+//                    error += dist;
+//                }
+//                
+//            }
+//            
+//            
+//            if (num_inliers > max_inliers) {
+//                memcpy(Pbest, Ptmp, sizeof(double) * 12);
+//                max_error = error;
+//                max_inliers = num_inliers;
+//            }
+//        }
+//        
+//        memcpy(P, Pbest, sizeof(double) * 12);
+//        
+//        printf("[find_projection_3x4_ransac] num_inliers = %d (out of %d)\n",
+//               max_inliers, num_pts);	
+//        printf("[find_projection_3x4_ransac] Avg error = %0.3f\n",
+//               (max_error/num_pts));
+//        printf("[find_projection_3x4_ransac] error = %0.3f\n", 
+//               sqrt(max_error / max_inliers));
+//        
+//        if (max_inliers < 6) {
+//            printf("[find_projection_3x4_ransac] "
+//                   "Too few inliers to continue.\n");
+//            
+//            free(inliers);
+//            
+//            return -1;
+//        }
+//        
+//        /* Do the final least squares minimization */
+//        
+//        #if 1
+//        	/* Fix the sign on the P matrix */
+//        	memcpy(Rinit + 0, Pbest + 0, 3 * sizeof(double));
+//        	memcpy(Rinit + 3, Pbest + 4, 3 * sizeof(double));
+//        	memcpy(Rinit + 6, Pbest + 8, 3 * sizeof(double));
+//        
+//        	dgerqf_driver(3, 3, Rinit, triangular, orthogonal);	    
+//        
+//        	/* Check the parity along the diagonal */
+//        	neg = 
+//        	    (triangular[0] < 0.0) + 
+//        	    (triangular[4] < 0.0) + 
+//        	    (triangular[8] < 0.0);
+//        
+//        	if ((neg % 2) == 1) {
+//        	    sign = -1;
+//        	} else {
+//        	    sign = 1;
+//        	}
+//       #endif
+//        
+//        num_inliers = 0;
+//        pts_final = (v3_t *) malloc(sizeof(v3_t) * max_inliers);
+//        projs_final = (v2_t *) malloc(sizeof(v2_t) * max_inliers);
+//        
+//        for (i = 0; i < num_pts; i++) {
+//            double pt[4] = { Vx(points[i]), 
+//                Vy(points[i]), 
+//                Vz(points[i]), 1.0 };
+//            
+//            double pr[3];
+//            double dx, dy, dist;
+//            
+//            matrix_product341(Pbest, pt, pr);
+//            
+//            /* Check cheirality */
+//            // EDIT!!!
+//            if (sign * pr[2] > 0.0) 
+//                continue;
+//            
+//            // EDIT!!!
+//            pr[0] /= -pr[2];
+//            pr[1] /= -pr[2];
+//            
+//            dx = pr[0] - Vx(projs[i]);
+//            dy = pr[1] - Vy(projs[i]);
+//            dist = dx * dx + dy * dy;
+//            if (dist < thresh_sq) 
+//            {
+//                pts_final[num_inliers] = points[i];
+//                projs_final[num_inliers] = projs[i];
+//                num_inliers++;
+//            }
+//        }
+//        
+//        if (num_inliers != max_inliers) {
+//            printf("[find_projection_3x4_ransac] Error! There was a miscount "
+//                   "somewhere: (%d != %d)\n", num_inliers, max_inliers);
+//        }
+//        
+//        find_projection_3x4(max_inliers, pts_final, projs_final, Plinear);
+//        
+//        #if 1
+//        	/* Fix the sign on the P matrix */
+//        	memcpy(Rinit + 0, Plinear + 0, 3 * sizeof(double));
+//        	memcpy(Rinit + 3, Plinear + 4, 3 * sizeof(double));
+//        	memcpy(Rinit + 6, Plinear + 8, 3 * sizeof(double));
+//        
+//        	dgerqf_driver(3, 3, Rinit, triangular, orthogonal);	    
+//        	
+//        	/* Check the parity along the diagonal */
+//        	neg = 
+//        	    (triangular[0] < 0.0) + 
+//        	    (triangular[4] < 0.0) + 
+//        	    (triangular[8] < 0.0);
+//        
+//        	if ((neg % 2) == 1) {
+//        	    sign = -1;
+//        	} else {
+//        	    sign = 1;
+//        	}
+//        #endif
+//        
+//        for (i = 0; i < num_pts; i++) {
+//            double pt[4] = 
+//            { Vx(points[i]), Vy(points[i]), Vz(points[i]), 1.0 };
+//            double pr[3];
+//            double dx, dy, dist;
+//            
+//            matrix_product341(Plinear, pt, pr);
+//            
+//            // EDIT!!!
+//            if (sign * pr[2] > 0.0)
+//                continue;
+//            
+//            // EDIT!!!
+//            pr[0] /= -pr[2];
+//            pr[1] /= -pr[2];
+//            
+//            dx = pr[0] - Vx(projs[i]);
+//            dy = pr[1] - Vy(projs[i]);
+//            
+//            dist = dx * dx + dy * dy;
+//            
+//            if (dist < thresh_sq) {
+//                num_inliers_new++;
+//            }
+//        }
+//        
+//        if (num_inliers_new < max_inliers) 
+//        {
+//            printf("[find_projection_3x4_ransac] Reverting to old solution\n");
+//            memcpy(Plinear, Pbest, 12 * sizeof(double));
+//    	}
+//        printf("Best matrix (pre-opt):\n");
+//        matrix_print(3, 4, Plinear);
+//        error = 0.0;
+//        for (i = 0; i < max_inliers; i++) {
+//            double pt[4] = 
+//            { Vx(pts_final[i]), Vy(pts_final[i]), Vz(pts_final[i]), 1.0 };
+//            double pr[3];
+//            double dx, dy, dist;
+//            
+//            matrix_product341(Plinear, pt, pr);
+//            pr[0] /= pr[2];
+//            pr[1] /= pr[2];
+//            
+//            dx = pr[0] - Vx(projs_final[i]);
+//            dy = pr[1] - Vy(projs_final[i]);
+//            
+//            dist = dx * dx + dy * dy;
+//            
+//            error += dist;
+//        }
+//        
+//        printf("Old error: %0.3e\n", sqrt(error / max_inliers));
+//        
+//        /* Polish the result */
+//        if (max_inliers >= 6) {
+//            int num_inliers_polished = 0;
+//            find_projection_3x4_nonlinear(max_inliers, pts_final, projs_final,
+//                                          Plinear, P);
+//            
+//            #if 1
+//                       /* Fix the sign on the P matrix */
+//                        memcpy(Rinit + 0, P + 0, 3 * sizeof(double));
+//                        memcpy(Rinit + 3, P + 4, 3 * sizeof(double));
+//                        memcpy(Rinit + 6, P + 8, 3 * sizeof(double));
+//            
+//                        dgerqf_driver(3, 3, Rinit, triangular, orthogonal);	    
+//                        
+//                        /* Check the parity along the diagonal */
+//                        neg = 
+//                            (triangular[0] < 0.0) + 
+//                            (triangular[4] < 0.0) + 
+//                            (triangular[8] < 0.0);
+//            
+//                        if ((neg % 2) == 1) {
+//                            sign = -1;
+//                        } else {
+//                            sign = 1;
+//                        }
+//            #endif
+//            
+//            /* Check that the number of inliers hasn't gone down */
+//            num_inliers_polished = 0;
+//            for (i = 0; i < num_pts; i++) {
+//                double pt[4] = 
+//                { Vx(points[i]), Vy(points[i]), Vz(points[i]), 1.0 };
+//                double pr[3];
+//                double dx, dy, dist;
+//                
+//                matrix_product341(P, pt, pr);
+//                
+//                // EDIT!!!
+//                if (sign * pr[2] > 0.0)
+//                    continue;
+//                
+//                // EDIT!!!
+//                pr[0] /= -pr[2];
+//                pr[1] /= -pr[2];
+//                
+//                dx = pr[0] - Vx(projs[i]);
+//                dy = pr[1] - Vy(projs[i]);
+//                
+//                dist = dx * dx + dy * dy;
+//                
+//                if (dist < thresh_sq) {
+//                    num_inliers_polished++;
+//                }
+//           }
+//            
+//            if (num_inliers_polished < max_inliers) {
+//                printf("Decreased number of inliers (%d < %d), reverting\n",
+//                      num_inliers_polished, max_inliers);
+//                
+//                memcpy(P, Plinear, sizeof(double) * 12);		
+//            }
+//        } 
+//        else 
+//        {
+//            memcpy(P, Plinear, sizeof(double) * 12);
+//    }
+//        
+//        printf("Best matrix (post-opt):\n");
+//        matrix_print(3, 4, P);
+//        
+//        error = 0.0;
+//        for (i = 0; i < max_inliers; i++) {
+//            double pt[4] = 
+//            { Vx(pts_final[i]), Vy(pts_final[i]), Vz(pts_final[i]), 1.0 };
+//            double pr[3];
+//            double dx, dy, dist;
+//            
+//            matrix_product341(P, pt, pr);
+//            
+//            // EDIT!!!
+//            pr[0] /= -pr[2];
+//            pr[1] /= -pr[2];
+//            
+//            dx = pr[0] - Vx(projs_final[i]);
+//            dy = pr[1] - Vy(projs_final[i]);
+//            
+//            dist = dx * dx + dy * dy;
+//            
+//            error += dist;
+//        }
+//        
+//        printf("New error: %0.3e\n", sqrt(error / max_inliers));
+//        
+//        free(inliers);
+//        free(pts_final);
+//        free(projs_final);
+//        
+//        return max_inliers;
+//    }
+//#undef MIN_PTS
+//} 
 
 void find_scale(int Numpt, int Var, double *A, double*B , double* result )
 {

@@ -90,7 +90,7 @@ int main (int argc, const char * argv[])
     int firstcapture = 1;
     bool SkipthisFrame=0;
     bool ThirdFrame=0;
-    
+    int loop =0;
     //  flow control 
     do 
         if ((cameraFrame = cvQueryFrame(camCapture))) 
@@ -151,7 +151,7 @@ int main (int argc, const char * argv[])
                     
                     int numTrialFmatrix = 30;
                     int numTrialRelativePose = 30;
-                    int Focuslength= 270;
+                    int Focuslength= 290;
                     int Ransac_threshold= 2.0;
                     float MaxAngle =0.07;
                    
@@ -215,21 +215,52 @@ int main (int argc, const char * argv[])
                             
                             FeaturePts.ConnectedVideoSequence( FeaturePts.m_rightPts, EpipolarGeometry.lrefined_pt /*connected pts*/ , EpipolarGeometry.rrefined_pt  /* current pts*/ , EpipolarGeometry.num_ofrefined_pts,FrameNum);
                              
-                            CameraPose.Egomotion(EpipolarGeometry, FeaturePts);
+                            CameraPose.Egomotion(EpipolarGeometry.R_relative, EpipolarGeometry.t_relative, FeaturePts);
                             
-                            double T[3];
-                            memcpy(T, CameraPose.mTcMatrix[FrameNum].n,3*sizeof(double));
-                            matrix_print(3,1,T);
-                           
-                            CameraPose.TriangulationN_Frames(FeaturePts);
+                            
+                            //double T[3];
+                            //memcpy(T, CameraPose.mTcMatrix[FrameNum].n,3*sizeof(double));
+                            //matrix_print(3,1,T);
+                            
+                            cout<< FeaturePts.mv2_frame.size()<<endl;
+
+                            CameraPose.TriangulationN_Frames( FeaturePts);
+                            
+                            cout<< FeaturePts.mv2_frame.size()<<endl;
+                                                        
+                            int idx= CameraPose.mtriTcmatrix.size();
+                            
+                            CameraPose.RemoveTri();
                             
                             vector<v2_t> left_pts;
                             vector<v2_t> right_pts;
                             vector<v3_t> V3Dpts;   
                             
+                            loop++;
+                            if(loop>1)
+                            {
+                            DumpPointsToPly("/Users/chih-hsiangchang/Desktop/Archive/result.ply", FeaturePts. _3DLocation
+                                            , FeaturePts. _3DLocation.size());
+                                break;
+                            
+                            }
+                            
+                             cout<< FeaturePts.mv2_location.size()<<endl;
+                            
                             FeaturePts. UpdatedFeatureTrack(left_pts,right_pts,V3Dpts, FrameNum);
                             
-                            FeaturePts. RemoveFeatureTrack();
+                            FeaturePts. CleanFeatureTrack();
+                            
+                            FeaturePts.Loadv2Pts( left_pts, right_pts);  
+                            
+                          
+                           cout<<FeaturePts.m_rightPts.size();
+                           cout<<FeaturePts.m_leftPts.size();
+                            
+                            FeaturePts.Loadv3Pts(V3Dpts); 
+                            FeaturePts.LoadFeatureList(FrameNum);
+                            
+                            
                             //OpenGLPlot. Setview();
                             //OpenGLPlot. PlotCamera(T);
                             
@@ -238,8 +269,7 @@ int main (int argc, const char * argv[])
                             //cout<< CameraPose.SizeofPose()<<endl;
                             //cout<< FeaturePts.NumReproject<<endl;
 
-                            break;
-                                                      
+                                       
                         }
                         
                         imgB= cvCloneImage(frame);

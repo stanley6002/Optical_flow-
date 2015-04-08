@@ -61,9 +61,9 @@ int find_projection_3x4(int num_pts, v3_t *points, v2_t *projs, double *P);
 
 /* Solve for a 3x4 projection matrix using RANSAC, given a set of 3D
  * points and 2D projections */
-int find_projection_3x4_ransac(int num_pts, v3_t *points, v2_t *projs, 
-			       double *P,
-			       int ransac_rounds, double ransac_threshold);
+//int find_projection_3x4_ransac(int num_pts, v3_t *points, v2_t *projs, 
+//			       double *P,
+//			       int ransac_rounds, double ransac_threshold);
 void find_scale(int Numpt, int Var, double *A, double*B , double* result );
 #ifdef __cplusplus
 }
