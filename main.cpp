@@ -151,9 +151,9 @@ int main (int argc, const char * argv[])
                     
                     int numTrialFmatrix = 30;
                     int numTrialRelativePose = 30;
-                    int Focuslength= 290;
+                    int Focuslength= 220;
                     int Ransac_threshold= 2.0;
-                    float MaxAngle =0.07;
+                    float MaxAngle =0.08;
                    
                     EpipolarGeometry EpipolarGeometry(match_query, match_train, size_match, numTrialFmatrix, numTrialRelativePose, Focuslength, Ransac_threshold);  
                     
@@ -210,7 +210,6 @@ int main (int argc, const char * argv[])
                             
                             int FrameNum =2;
                             
-                             
                             // Connect feature point and create feature tracks 
                             
                             FeaturePts.ConnectedVideoSequence( FeaturePts.m_rightPts, EpipolarGeometry.lrefined_pt /*connected pts*/ , EpipolarGeometry.rrefined_pt  /* current pts*/ , EpipolarGeometry.num_ofrefined_pts,FrameNum);
@@ -237,15 +236,13 @@ int main (int argc, const char * argv[])
                             vector<v3_t> V3Dpts;   
                             
                             loop++;
-                            if(loop>1)
+                            if (loop>1)
                             {
-                            DumpPointsToPly("/Users/chih-hsiangchang/Desktop/Archive/result.ply", FeaturePts. _3DLocation
+                              DumpPointsToPly("/Users/chih-hsiangchang/Desktop/Archive/result.ply", FeaturePts. _3DLocation
                                             , FeaturePts. _3DLocation.size());
                                 break;
+                             }
                             
-                            }
-                            
-                             cout<< FeaturePts.mv2_location.size()<<endl;
                             
                             FeaturePts. UpdatedFeatureTrack(left_pts,right_pts,V3Dpts, FrameNum);
                             
@@ -253,11 +250,8 @@ int main (int argc, const char * argv[])
                             
                             FeaturePts.Loadv2Pts( left_pts, right_pts);  
                             
-                          
-                           cout<<FeaturePts.m_rightPts.size();
-                           cout<<FeaturePts.m_leftPts.size();
-                            
                             FeaturePts.Loadv3Pts(V3Dpts); 
+                            
                             FeaturePts.LoadFeatureList(FrameNum);
                             
                             

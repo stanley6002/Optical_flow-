@@ -180,13 +180,14 @@ void CameraPose::Egomotion(double* R, double*T, FeaturePts FeaturePts)
     
     }
     
-    double UpdateR[9];
-    CameraRotRefine( NumofReproject ,mv3ProjectPts, mv2ReprojectPts , updated_rotation , Tc_updated , Kmatrix, UpdateR);
+    //double UpdateR[9];
+    CameraRotRefine( NumofReproject ,mv3ProjectPts, mv2ReprojectPts , updated_rotation , Tc_updated , Kmatrix);
     
-    //matrix_print(3,3,UpdateR);
-    matrix_print(3,1,Tc_updated);
+    //matrix_print(3,3,updated_rotation);
+    //matrix_print(3,1,Tc_updated);
+    //matrix_print(3,3,Kmatrix);
     
-    double error3 =  CameraReprojectError(NumofReproject, UpdateR, Tc_updated , FeaturePts.mv3ProjectionPts ,FeaturePts.mv2ReprojectPts ,  Kmatrix);
+    double error3 =  CameraReprojectError(NumofReproject, updated_rotation , Tc_updated , FeaturePts.mv3ProjectionPts ,FeaturePts.mv2ReprojectPts ,  Kmatrix);
    
     cout<<"NumofReproject" << NumofReproject <<"reprojection error " <<error3/NumofReproject<<endl;
     
@@ -195,11 +196,11 @@ void CameraPose::Egomotion(double* R, double*T, FeaturePts FeaturePts)
    
     LoadKMatrix(Kmatrix,(int) KMatrix.size()-1);
     LoadTcMatrix(Tc_updated);
-    LoadRotcMatrix(UpdateR);
+    LoadRotcMatrix(updated_rotation);
     
     LoadTriKmatrix(Kmatrix,(int) KMatrix.size()-1);
     LoadTriTcmatrix(Tc_updated);
-    LoadTriRotmatrix(UpdateR);
+    LoadTriRotmatrix(updated_rotation);
     
     delete [] mv3ProjectPts;
     delete [] mv2ReprojectPts;    
@@ -458,7 +459,7 @@ double CameraPose :: TriangulationN_Frames(FeaturePts& Pts)
             double Rotation[9];
             double Tc[3];
             
-            PopKMattix(N, K);  
+            PopTriKMattix(N, K);  
             /* Get_focal_length* i is ith camera's parameters*/ 
             //cout<<"T vector"<<endl;       
             
@@ -468,11 +469,11 @@ double CameraPose :: TriangulationN_Frames(FeaturePts& Pts)
             matrix_product(3, 3, 3, 1, Kinv, Pt3, p_n);
             pv[j]= v2_new(-p_n[0],-p_n[1]);
             
-            PopRotcMatrix(N, Rotation);
+            PopTriRotcMatrix(N, Rotation);
             
             memcpy(Rs + 9 * j, Rotation, 9 * sizeof(double));
             
-            PopTcMatrix(N,Tc);
+            PopTriTcMatrix(N,Tc);
             matrix_product(3,3,3,1,Rotation,Tc,Translated);
             matrix_scale(3,1,Translated,-1.0,Translation_Scaled); 
             memcpy(ts + 3 * j,Translation_Scaled, 3 * sizeof(double));
@@ -481,7 +482,7 @@ double CameraPose :: TriangulationN_Frames(FeaturePts& Pts)
         
         double error=0;
         
-        v3_t pt = triangulate_n(num_frame, pv, Rs, ts, &error);
+        v3_t pt = triangulate_n (num_frame, pv, Rs, ts, &error);
         
        _3Dpts.push_back(pt); 
         

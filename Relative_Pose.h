@@ -90,6 +90,7 @@ class CameraPose
 
     inline void PopTriKMattix(int i, double*K)
     {
+        cout<<i<<endl;
         memcpy(K,mtriKmatrix[i].n, 9*sizeof(double));
     }
     
@@ -102,9 +103,6 @@ class CameraPose
     {
         memcpy(T,mtriTcmatrix[i].n,3*sizeof(double));
     }
-
-    
-    
     
     inline void InitializeFirstTwoKMatrix(double* K1Matrix, double*K2Matrix)
     {

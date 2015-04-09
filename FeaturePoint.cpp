@@ -114,8 +114,6 @@ void FeaturePts::ConnectedVideoSequence(vector<v2_t> Previous_pts   /*previous f
                             
                             tempCurrent[j] =NUM;
                             tempPrevious[i]=NUM;
-                            
-                            cout<<"collected "<<endl;
                             break;
                       }
                 }    

@@ -167,7 +167,7 @@ v3_t triangulate_n_refine(v3_t pt, int num_points,
     
     error = sqrt(error / num_points);
     
-    // printf("[triangulate_n] Error [after polishing]: %0.3e\n", error);
+    printf("[triangulate_n] Error [after polishing]: %0.3e\n", error);
     
     if (error_out != NULL) {
         *error_out = error;
@@ -244,8 +244,7 @@ v3_t triangulate_n(int num_points,
     global_ps = p;
     global_Rs = R;  global_ts = t;
     lmdif_driver(triangulate_n_residual, num_eqs, num_vars, x, 1.0e-8);
-
-
+  
     r = v3_new(x[0], x[1], x[2]);
     
     free(A);

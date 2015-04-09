@@ -816,7 +816,7 @@ void EpipolarGeometry::TwoviewTriangulation(vector<v2_t> & left_pts,vector<v2_t>
              temp = Triangulate(p, q, R1matrix , t1matrix ,R_relative, t_relative, error_tr, in_front, angle ,true,K1matrix,K2matrix);  
             
              m_3Dpts[i]= temp;
-             printf("%0.4f %0.4f %0.4f\n", temp.p[0], temp.p[1],temp.p[2]);
+             //printf("%0.4f %0.4f %0.4f\n", temp.p[0], temp.p[1],temp.p[2]);
           }
 
     PointRefinement(m_3Dpts, left_pts , right_pts, V3Dpts);
