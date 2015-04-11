@@ -976,6 +976,7 @@ void EpipolarGeometry::PointRefinement(v3_t* m_3Dpts,vector<v2_t> & left_pts,vec
         if (densitytemp[i]<0.3)
             tempvector[i] = true;
     }
+    delete [] densitytemp;
 }
 
 

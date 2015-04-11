@@ -90,7 +90,7 @@ class CameraPose
 
     inline void PopTriKMattix(int i, double*K)
     {
-        cout<<i<<endl;
+        //cout<<i<<endl;
         memcpy(K,mtriKmatrix[i].n, 9*sizeof(double));
     }
     

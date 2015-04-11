@@ -171,7 +171,7 @@ void FeaturePts:: UpdatedFeatureTrack(vector<v2_t>& left_pts, vector<v2_t>& righ
           }
           
     }
-    cout<< left_pts.size()<<" "<<right_pts.size()<<endl;
+    //cout<< left_pts.size()<<" "<<right_pts.size()<<endl;
 }
 void FeaturePts::CleanFeatureTrack()
 {
@@ -183,7 +183,6 @@ void FeaturePts::CleanFeatureTrack()
     
     vector<v2_t> mv2ReprojectPtsEmpty;
     vector<v3_t> mv3ProjectionPtsEmpty;
-    
     
     m_leftPts.swap (leftPtsEmpty);
     m_rightPts.swap(rightPtsEmpty);

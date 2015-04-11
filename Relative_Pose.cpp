@@ -160,6 +160,7 @@ void CameraPose::Egomotion(double* R, double*T, FeaturePts FeaturePts)
     
     double error1 =  CameraReprojectError(NumofReproject, updated_rotation, updated_t , FeaturePts.mv3ProjectionPts ,FeaturePts.mv2ReprojectPts ,  Kmatrix);
     cout<<"reprojection error no alightment  " <<error1/NumofReproject<<endl;    
+    
     // this part alight the 3D point with delat vector//
     
     TwoDalighment(NumofReproject, updated_rotation , updated_t , FeaturePts.mv3ProjectionPts, FeaturePts.mv2ReprojectPts, Tc_updated);
@@ -203,7 +204,10 @@ void CameraPose::Egomotion(double* R, double*T, FeaturePts FeaturePts)
     LoadTriRotmatrix(updated_rotation);
     
     delete [] mv3ProjectPts;
-    delete [] mv2ReprojectPts;    
+    delete [] mv2ReprojectPts;   
+    delete [] Rpre;
+    delete [] Tpre;
+    delete [] Kmatrix;
 
 }
  void  CameraPose:: TwoDalighment(int NumofReproject , double*Rot, double*trans, vector<v3_t> P__3DSolvedforparameters, 
@@ -255,7 +259,7 @@ void CameraPose::Egomotion(double* R, double*T, FeaturePts FeaturePts)
     
     DeltaVector_Ransac( _2Dpt, _3Dpt, NumofReproject , Parameter_vec, 150 , 0.1);
     
-    double TR[3];
+    //double TR[3];
     matrix_transpose(3, 3, Rott, Rott_transpose);
     matrix_product331(Rott_transpose,Parameter_vec , R_t_T);
     
@@ -274,6 +278,7 @@ void CameraPose::Egomotion(double* R, double*T, FeaturePts FeaturePts)
 
     delete [] _3Dpt;
     delete [] _2Dpt;
+    delete [] Kmatrix;
     
 }
 
@@ -467,7 +472,9 @@ double CameraPose :: TriangulationN_Frames(FeaturePts& Pts)
             double p_n[3];
             
             matrix_product(3, 3, 3, 1, Kinv, Pt3, p_n);
-            pv[j]= v2_new(-p_n[0],-p_n[1]);
+            
+            pv[j].p[0]= -p_n[0];
+            pv[j].p[1]= -p_n[1];
             
             PopTriRotcMatrix(N, Rotation);
             
@@ -486,12 +493,13 @@ double CameraPose :: TriangulationN_Frames(FeaturePts& Pts)
         
        _3Dpts.push_back(pt); 
         
-      free(Rs);
-      free(ts);
-      delete[]pv;
+      delete [] Rs;
+      delete [] ts;
+      delete [] pv;
     }
      bool* tempvector = new bool [NumPts];
-      for (int i=0;i<NumPts;i++)
+    
+     for (int i=0;i<NumPts;i++)
            tempvector[i]= false;
      
     RefineN_FramePoints( _3Dpts , NumPts, tempvector);
@@ -509,12 +517,15 @@ double CameraPose :: TriangulationN_Frames(FeaturePts& Pts)
           shift_index++;
         }   
      }
+    
     int indx= (int)_3Dpts.size();
     
     Pts._3DLocation.insert(Pts._3DLocation.end(),_3Dpts.begin(),_3Dpts.end());
     Pts.m_3Dpts.swap(_3Dpts);
       
-    cout<<"test"<<endl;
+    delete [] tempvector;
+    
+    //cout<<"test"<<endl;
     //return(_2D_error);
 }
 void RefineN_FramePoints(vector<v3_t>_3DPts, int NumPts, bool* tempvector)
@@ -589,6 +600,7 @@ void _3DdepthRefine (vector<v3_t> m_3Dpts, bool* tempvector, int num_ofrefined_p
     float varince= Variance (m_3Dpts, depth, size_);
     float *densitytemp  = new float [size_]; 
     cout<< depth <<"variance "<<varince <<endl;
+    
     for (int i=0;i< size_;i++)
     {
         float x = (float) m_3Dpts[i].p[2];
@@ -598,6 +610,9 @@ void _3DdepthRefine (vector<v3_t> m_3Dpts, bool* tempvector, int num_ofrefined_p
         if (densitytemp[i]<0.3)
             tempvector[i] = true;
     }
+    
+    
+    delete [] densitytemp;
 }
 
 float Variance (vector<v3_t> _3Dpts, const float depth , const int size_)
@@ -614,7 +629,8 @@ float Variance (vector<v3_t> _3Dpts, const float depth , const int size_)
             num++;
         }
     }
-
+     
+    delete [] tempz;
     return( sum *= 1. / num );
 
 }

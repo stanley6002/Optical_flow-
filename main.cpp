@@ -151,7 +151,7 @@ int main (int argc, const char * argv[])
                     
                     int numTrialFmatrix = 30;
                     int numTrialRelativePose = 30;
-                    int Focuslength= 220;
+                    int Focuslength= 270;
                     int Ransac_threshold= 2.0;
                     float MaxAngle =0.08;
                    
@@ -236,7 +236,7 @@ int main (int argc, const char * argv[])
                             vector<v3_t> V3Dpts;   
                             
                             loop++;
-                            if (loop>1)
+                            if (loop>3)
                             {
                               DumpPointsToPly("/Users/chih-hsiangchang/Desktop/Archive/result.ply", FeaturePts. _3DLocation
                                             , FeaturePts. _3DLocation.size());
@@ -254,6 +254,25 @@ int main (int argc, const char * argv[])
                             
                             FeaturePts.LoadFeatureList(FrameNum);
                             
+                            int icx =(int) FeaturePts.mv2_frame. size();
+                            int Maxmum = -99999;
+                            
+                            for(int i=0;i<idx ;i++)
+                            {
+                                int index = (int) FeaturePts.mv2_frame[idx].size();
+                                for (int j=0;j<index ;j++)
+                                {
+                                
+                                  if(FeaturePts.mv2_frame[i][j]>Maxmum)
+                                  {
+                                      Maxmum= FeaturePts.mv2_frame[i][j];
+                                  
+                                  }
+                                
+                                }
+                            }
+                            
+                            cout<<"check Maxmum "<< Maxmum<<endl;
                             
                             //OpenGLPlot. Setview();
                             //OpenGLPlot. PlotCamera(T);
