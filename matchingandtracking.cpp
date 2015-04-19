@@ -22,8 +22,10 @@
         Surf_activate=1;
     }
     else 
+    {
         Surf_activate=0;
-
+    
+    }
 }
 
 void FAST_ :: FAST_tracking(std::vector<CvPoint2D32f>& match_query, std::vector<CvPoint2D32f>& match_train)
@@ -31,22 +33,23 @@ void FAST_ :: FAST_tracking(std::vector<CvPoint2D32f>& match_query, std::vector<
 
      if(! Surf_activate)
      {
-         cv::FAST(ImageGray1,  FAST_query_kpts,  Level);
-         cv::FAST(ImageGray2,  FAST_train_kpts,  Level);
+         cv::FAST(ImageGray1,  FAST_query_kpts,  Level, TRUE);
+         cv::FAST(ImageGray2,  FAST_train_kpts,  Level, TRUE);
 
+         
          FAST_descriptor = new cv::BriefDescriptorExtractor(64);
          
          FAST_descriptor->compute(ImageGray1,  FAST_query_kpts, FAST_query_desc);
          FAST_descriptor->compute(ImageGray2,  FAST_train_kpts,FAST_train_desc);
        
          FAST_matcher = cv::DescriptorMatcher::create("BruteForce-Hamming");
-         
+     
          std::vector<cv::KeyPoint> test_kpts;
          FAST_H_prev = cv::Mat::eye(3,3,CV_32FC1);
          
-         warpKeypoints(FAST_H_prev.inv(), FAST_query_kpts, test_kpts);
-         cv::Mat FAST_mask = windowedMatchingMask(test_kpts, FAST_train_kpts, 30, 30);
-         FAST_matcher->match(FAST_query_desc, FAST_train_desc, FAST_matche, FAST_mask);
+         //warpKeypoints(FAST_H_prev.inv(), FAST_query_kpts, test_kpts);
+         //cv::Mat FAST_mask = windowedMatchingMask(test_kpts, FAST_train_kpts, 100, 100 );
+         //FAST_matcher->match(FAST_query_desc, FAST_train_desc, FAST_matche, FAST_mask);
             int i=0;
          
          for (; i< FAST_matche.size(); i++)
@@ -66,24 +69,28 @@ void FAST_ :: FAST_tracking(std::vector<CvPoint2D32f>& match_query, std::vector<
      
      if(Surf_activate)
      {
-         cv::FAST(ImageGray1,  FAST_query_kpts,  Level);
-         cv::FAST(ImageGray2,  FAST_train_kpts,  Level);
+         cv::FAST(ImageGray1,  FAST_query_kpts,  Level, TRUE);
+         cv::FAST(ImageGray2,  FAST_train_kpts,  Level, TRUE);
          
          FAST_descriptor= new cv::SurfDescriptorExtractor(4,2);
          
          FAST_descriptor->compute(ImageGray1, FAST_query_kpts, FAST_query_desc);
          FAST_descriptor->compute(ImageGray2, FAST_train_kpts, FAST_train_desc);
 
-                   std::vector<cv::DMatch> FAST_matcher;
+        std::vector<cv::DMatch> FAST_matcher;
         
         std::vector<cv::KeyPoint> test_kpts;
          
-         FAST_H_prev = cv::Mat::eye(3,3,CV_32FC1);
-         warpKeypoints(FAST_H_prev.inv(), FAST_query_kpts, test_kpts);
-         cv::Mat FAST_mask = windowedMatchingMask(test_kpts, FAST_train_kpts, 40, 40);
+         //FAST_H_prev = cv::Mat::eye(3,3,CV_32FC1);
+         //warpKeypoints(FAST_H_prev.inv(), FAST_query_kpts, test_kpts);
+         //cv::Mat FAST_mask = windowedMatchingMask(test_kpts, FAST_train_kpts, 250, 250);
         
+         //new cv::SiftFeatureDetector();
+         //detector = new SiftFeatureDetector;
+         //cv::DescriptorExtractor
+         
          cv::BruteForceMatcher<cv::L2<float> > matcher;
-         matcher.match(FAST_query_desc, FAST_train_desc, FAST_matcher, FAST_mask);
+         matcher.match(FAST_query_desc, FAST_train_desc, FAST_matcher);
          
          //std::vector<std::vector<cv::DMatch> > matches;
          
@@ -179,18 +186,20 @@ void LKFeatures::  LKFeaturesTracking ()
     
    if (UseOptical_flow)
    {
-       goodFeaturesToTrack(ImageGray1, corners, 400, 0.001, 8);
-       cornerSubPix( ImageGray1, corners, cv::Size(9,9) , cv::Size(-1,-1) , cv::TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 20, 0.000001 ));
-       calcOpticalFlowPyrLK(ImageGray1, ImageGray2, corners, nextPts, status, err, cv::Size(40,40));
+       
+       goodFeaturesToTrack(ImageGray1, corners, 400, 0.001, 10);
+       cornerSubPix( ImageGray1, corners, cv::Size(9,9) , cv::Size(-1,-1) , cv::TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 0.001 ));
+       calcOpticalFlowPyrLK(ImageGray1, ImageGray2, corners, nextPts, status, err, cv::Size(25,25));
    }
    else
    {
-        goodFeaturesToTrack(ImageGray1,  LK_query_kpts, 400,0.001,9);
-        cornerSubPix( ImageGray1, LK_query_kpts, cv::Size(9,9) , cv::Size(-1,-1) , cv::TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 20, 0.000001 ));
-        goodFeaturesToTrack(ImageGray2,  LK_train_kpts, 400,0.001,9);
-        cornerSubPix( ImageGray2, LK_train_kpts, cv::Size(9,9) , cv::Size(-1,-1) , cv::TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 20, 0.000001 ));
-        
-        LK_descriptor = new cv::BriefDescriptorExtractor(16);
+        goodFeaturesToTrack(ImageGray1,  LK_query_kpts, 400,0.0001,8);
+        cornerSubPix( ImageGray1, LK_query_kpts, cv::Size(11,11) , cv::Size(-1,-1) , cv::TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 0.001 ));
+        goodFeaturesToTrack(ImageGray2,  LK_train_kpts, 400,0.0001,8);
+        cornerSubPix( ImageGray2, LK_train_kpts, cv::Size(11,11) , cv::Size(-1,-1) , cv::TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 0.001 ));
+        //calcOpticalFlowPyrLK(ImageGray1, ImageGray2, LK_query_kpts, LK_train_kpts, status, err, cv::Size(30,30));
+       
+        LK_descriptor = new cv::BriefDescriptorExtractor(32);
 
         //// CONVERT 2D pointf to keypoint
 
@@ -207,11 +216,11 @@ void LKFeatures::  LKFeaturesTracking ()
 
         for(int i=0;i<size_;i++)
             
-        {    temp_query[i].pt.x= (int) LK_query_kpts[i].x;
-             temp_query[i].pt.y= (int) LK_query_kpts[i].y;	// ... and convert into kpts
+        {    temp_query[i].pt.x=  LK_query_kpts[i].x;
+             temp_query[i].pt.y=  LK_query_kpts[i].y;	// ... and convert into kpts
              
-             temp_train[i].pt.x= (int) LK_train_kpts[i].x;
-             temp_train[i].pt.y= (int) LK_train_kpts[i].y;
+             temp_train[i].pt.x=  LK_train_kpts[i].x;
+             temp_train[i].pt.y=  LK_train_kpts[i].y;
         }
         
        
@@ -219,11 +228,13 @@ void LKFeatures::  LKFeaturesTracking ()
     
         LK_descriptor->compute(ImageGray1,  temp_query,  LK_query_desc);
         LK_descriptor->compute(ImageGray2,  temp_train,  LK_train_desc);
-
+         
+       
+       
         LK_matcher = cv::DescriptorMatcher::create("BruteForce-Hamming");   
 
         LK_matcher->match(LK_query_desc, LK_train_desc, LK_matche);
-
+       
         for (int i=0; i< (int) LK_matche.size(); i++)
         {
             

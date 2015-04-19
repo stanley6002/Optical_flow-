@@ -18,10 +18,9 @@ using namespace std;
 
 class FeaturePts 
 {   
-    friend class CameraPose;
-    friend class EpipolarGeometry;
+    //friend class CameraPose;
+    //friend class EpipolarGeometry;
 public:
-    // temporary storage //
     vector<v3_t> m_3Dpts; 
     
     vector<v2_t> m_leftPts;  
@@ -30,8 +29,19 @@ public:
     // store find 3D position //
     vector<v3_t> _3DLocation;
     
+    vector<v2_t> mv2ReprojectPts;
+    vector<v3_t> mv3ProjectionPts;
+    
     int NumReproject;
     int FrameNumber;
+    
+    vector<vector<v2_t> > mv2_location;   // show 2D point locations
+    vector<vector<int> >  mv2_frame;      // show frame list 
+
+    
+    
+    // temporary storage //
+
     
     //  Add Frame Sequences at following:
     //
@@ -61,8 +71,7 @@ public:
     //  across three consectutive frame          across two consecutive 
     //  temporary storage //
     
-    vector<vector<v2_t> > mv2_location;   // show 2D point locations
-    vector<vector<int> >  mv2_frame;      // show frame list 
+  
     
     inline void LoadFeatureList(int FrameNum)
     {
@@ -113,13 +122,13 @@ public:
         }
     }*/
     
-    inline void Loadv2Pts(vector<v2_t>left_pts, vector<v2_t>right_pts)
+    inline void Loadv2Pts(vector<v2_t>& left_pts, vector<v2_t>& right_pts)
     {
         m_leftPts.insert(m_leftPts.end() , left_pts.begin() , left_pts.end() );
         m_rightPts.insert(m_rightPts.end() , right_pts.begin() , right_pts.end() );
     }
     
-    inline void Loadv3Pts(vector<v3_t>V3Dpts)
+    inline void Loadv3Pts(vector<v3_t>& V3Dpts)
     {
         m_3Dpts. insert(m_3Dpts.end(), V3Dpts.begin(), V3Dpts.end());  
     }  
@@ -128,19 +137,21 @@ public:
    
     void CreateFeatureTrack(int* tempCurrent, int ConnectedPtsize, v2_t* Connected_pts, v2_t* Current_pts,int FrameNumber);
     
-    void CollectFeatureTrackProjectPts(int Previous_ptsize , v2_t* Current_pts, int FrameNum);
+    //void CollectFeatureTrackProjectPts(int Previous_ptsize , v2_t* Current_pts, int FrameNum);
+    void CollectFeatureTrackProjectPts(int Previous_ptsize , v2_t* Current_pts, int FrameNum, int* StackIdx);
    
     void UpdatedFeatureTrack(vector<v2_t>& left_pts, vector<v2_t>& right_pts, vector<v3_t>& V3Dpts, int FrameNum);
     
     void CleanFeatureTrack();
     
+    void PointRefinement(vector<v3_t>& Tempv3Dpts, vector <bool> tempvector);
+    
     FeaturePts ();
     ~ FeaturePts ();
 
 private:
-    int* StackIndex;
+    //int* StackIndex;
     
-    vector<v2_t> mv2ReprojectPts;
-    vector<v3_t> mv3ProjectionPts;
+   
     
 };

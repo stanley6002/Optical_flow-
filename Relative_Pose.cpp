@@ -7,38 +7,38 @@
 //
 
 #include "Relative_Pose.h"
-#include "CameraPoseRefinement.h"
+//#include "CameraPoseRefinement.h"
 
-double CameraPose:: CameraReprojectError(int NumPts, double *R, double* Tc, vector<v3_t> Pts,vector<v2_t> Projpts, double * Kmatrix)
+double CameraPose:: CameraReprojectError(int NumPts, double *R, double* Tc, v3_t* Pts,v2_t* Projpts, double * Kmatrix)
 {
     
-   
+    
     double error =0;
     for(int i  =0;i< NumPts;i++)
     {
-     double b2[3];  
-     double b_cam[3];
-     double b_proj[3];
-     double xij[2];   
-    //K*[R|-Rtc]X//
-    //K*R*[X-tc] //
-    
-    b2[0] = Pts[i].p[0] - Tc[0];
-    b2[1] = Pts[i].p[1] - Tc[1];
-    b2[2] = Pts[i].p[2] - Tc[2];
-    
-    matrix_product331(R, b2, b_cam);  
-    
-    matrix_product331(Kmatrix, b_cam, b_proj);
-    
-    xij[0] = -b_proj[0] / b_proj[2];
-    xij[1] = -b_proj[1] / b_proj[2];
-    
-    double dx = Vx(Projpts[i]) - xij[0];
-    double dy = Vy(Projpts[i]) - xij[1];
-    
-    //cout<< Vx(Projpts[i])<<" "<<Vy(Projpts[i])<<" "<< xij[0]<<" "<<xij[1]<<endl;   
-     error += sqrt(dx * dx + dy * dy);
+        double b2[3];  
+        double b_cam[3];
+        double b_proj[3];
+        double xij[2];   
+        //K*[R|-Rtc]X//
+        //K*R*[X-tc] //
+        
+        b2[0] = Pts[i].p[0] - Tc[0];
+        b2[1] = Pts[i].p[1] - Tc[1];
+        b2[2] = Pts[i].p[2] - Tc[2];
+        
+        matrix_product331(R, b2, b_cam);  
+        
+        matrix_product331(Kmatrix, b_cam, b_proj);
+        
+        xij[0] = -b_proj[0] / b_proj[2];
+        xij[1] = -b_proj[1] / b_proj[2];
+        
+        double dx = Vx(Projpts[i]) - xij[0];
+        double dy = Vy(Projpts[i]) - xij[1];
+        
+        //cout<< Vx(Projpts[i])<<" "<<Vy(Projpts[i])<<" "<< xij[0]<<" "<<xij[1]<<endl;   
+        error += sqrt(dx * dx + dy * dy);
     }
     return(error);
 }
@@ -47,9 +47,11 @@ double CameraPose:: CameraReprojectError(int NumPts, double *R, double* Tc, vect
 
 CameraPose::CameraPose()
 {
+   
 }
 CameraPose::~CameraPose()
 {
+    
 }
 
 void CameraPose::PrintRotmatrix(int i)
@@ -87,27 +89,37 @@ void CameraPose::PrintKmatrix(int i)
 //   t3=-R23'*R12'*t12-R23'*t23
 //
 
-void CameraPose::Egomotion(double* R, double*T, FeaturePts FeaturePts)
+void CameraPose::Egomotion(double* R, double*T, vector<v3_t> v3ProjectPts, vector<v2_t> v2ReprojectPts )
 {
-//    int NumofReproject = FeaturePts.NumReproject;
-//    double P[12];
-//     v3_t* mv3ProjectPts= new v3_t [NumofReproject];
-//     v2_t* mv2ReprojectPts= new v2_t [NumofReproject];
-//       
-//    for(int i=0;i< NumofReproject;i++)
-//      {
-//        mv3ProjectPts[i]= FeaturePts.mv3ProjectionPts[i];
-//        mv2ReprojectPts[i]= FeaturePts.mv2ReprojectPts[i];
-//       
-//       }
-//
-//    double proj_estimation_threshold=8; 
-//    int r = find_projection_3x4_ransac(NumofReproject, mv3ProjectPts,mv2ReprojectPts ,P,200,proj_estimation_threshold);
-//    double R_app[9];
-//    double T_app[3];
-//    double K2[9];
-//    
-//    CameraParameter_Process(P,R_app,T_app,K2);
+    if((int)v3ProjectPts.size() != (int) v2ReprojectPts.size())
+    {
+        cout<<"error"<<endl;
+    }
+    
+        int NumofReprojectPts = (int) v3ProjectPts.size();
+    
+         v3_t* mv3ProjectPts= new v3_t [NumofReprojectPts];
+         v2_t* mv2ReprojectPts= new v2_t [NumofReprojectPts];
+         
+         copy(v3ProjectPts.begin(), v3ProjectPts.end(), mv3ProjectPts);
+         copy(v2ReprojectPts.begin(),v2ReprojectPts.end(), mv2ReprojectPts);
+        
+    
+    
+    //    for(int i=0;i< NumofReprojectPts;i++)
+    //      {
+    //         cout<<mv3ProjectPts[i].p[0]<<" "<<mv3ProjectPts[i].p[1]<<" "<<mv3ProjectPts[i].p[2]<<endl;
+    //          cout<<mv2ReprojectPts[i].p[0]<<" "<<mv2ReprojectPts[i].p[1]<<endl;
+    //       
+    //    }
+    //
+    //    double proj_estimation_threshold=8; 
+    //    int r = find_projection_3x4_ransac(NumofReproject, mv3ProjectPts,mv2ReprojectPts ,P,200,proj_estimation_threshold);
+    //    double R_app[9];
+    //    double T_app[3];
+    //    double K2[9];
+    //    
+    //    CameraParameter_Process(P,R_app,T_app,K2);
     
     double R_relative[9];
     double T_relative[3];
@@ -131,10 +143,10 @@ void CameraPose::Egomotion(double* R, double*T, FeaturePts FeaturePts)
     PopRotcMatrix((int) mRcMatrix.size()-1, Rpre);   // load previous 
     PopTcMatrix( (int) mTcMatrix.size()-1,Tpre);
     
-        
+    
     cout<<"Previous"<<endl;
     cout<<Tpre[0]<<" "<<Tpre[1]<<" "<<Tpre[2]<<endl;
-     
+    
     matrix_product33(R_relative, Rpre, updated_rotation);           // RotCurrent * RotPrevious // 
     //matrix_product33(Rpre, R_relative, updated_rotation); 
     matrix_transpose_product(3, 3, 3, 1, R_relative, Tpre , fin_t); // ( update  -Ri'*Center of previsous frame )
@@ -154,52 +166,49 @@ void CameraPose::Egomotion(double* R, double*T, FeaturePts FeaturePts)
     double* Kmatrix = new double [9];
     
     PopKMattix((int) KMatrix.size()-1, Kmatrix) ;
+    //matrix_print (3,3, Kmatrix);
     
-    int NumofReproject = FeaturePts.NumReproject;
+    
     double Tc_updated[3];
+    double error1 =  CameraReprojectError( NumofReprojectPts, updated_rotation, updated_t , mv3ProjectPts , mv2ReprojectPts ,  Kmatrix);
+    cout<<"reprojection error no alightment  " <<error1/NumofReprojectPts<<endl;    
+
+    // this part alight the 3D point with delat vector//   
+    TwoDalighment(NumofReprojectPts, updated_rotation , updated_t , mv3ProjectPts, mv2ReprojectPts, Tc_updated);
     
-    double error1 =  CameraReprojectError(NumofReproject, updated_rotation, updated_t , FeaturePts.mv3ProjectionPts ,FeaturePts.mv2ReprojectPts ,  Kmatrix);
-    cout<<"reprojection error no alightment  " <<error1/NumofReproject<<endl;    
+    //v3_t* mv3ProjectPts= new v3_t [NumofReproject];
+    //v2_t* mv2ReprojectPts= new v2_t [NumofReproject];
     
-    // this part alight the 3D point with delat vector//
+    //v3_t mv3ProjectPts [NumofReproject];
+    //v2_t mv2ReprojectPts[NumofReproject];
     
-    TwoDalighment(NumofReproject, updated_rotation , updated_t , FeaturePts.mv3ProjectionPts, FeaturePts.mv2ReprojectPts, Tc_updated);
     
-    //double error2 =  CameraReprojectError(NumofReproject, updated_rotation, Tc_updated , FeaturePts.mv3ProjectionPts ,FeaturePts.mv2ReprojectPts ,  Kmatrix);
-    //cout<<"after alightment"<<endl;
-    //matrix_print(3,1,Tc_updated);
-    //cout<<"reprojection error " <<error2/NumofReproject<<endl;
+    //cout<<"points" <<(int)FeaturePts.mv3ProjectionPts.size() <<" "<<(int) FeaturePts.mv2ReprojectPts.size()<<endl;
     
-    v3_t* mv3ProjectPts= new v3_t [NumofReproject];
-    v2_t* mv2ReprojectPts= new v2_t [NumofReproject];
-    
-    for(int i=0;i< NumofReproject;i++)
-    {
-     
-        mv3ProjectPts[i]= FeaturePts.mv3ProjectionPts[i];
-        mv2ReprojectPts[i]= FeaturePts.mv2ReprojectPts[i];
-    
-    }
+    //for(int i=0;i< NumofReproject;i++)
+    //{
+        
+    //    mv3ProjectPts[i]= FeaturePts.mv3ProjectionPts[i];
+    //    mv2ReprojectPts[i]= FeaturePts.mv2ReprojectPts[i];
+        
+    //}
     
     //double UpdateR[9];
-    CameraRotRefine( NumofReproject ,mv3ProjectPts, mv2ReprojectPts , updated_rotation , Tc_updated , Kmatrix);
+    CameraRotRefine( NumofReprojectPts  , mv3ProjectPts, mv2ReprojectPts , updated_rotation , Tc_updated , Kmatrix);
+  
+     double error3 =  CameraReprojectError(NumofReprojectPts, updated_rotation , Tc_updated , mv3ProjectPts ,mv2ReprojectPts ,  Kmatrix);
     
-    //matrix_print(3,3,updated_rotation);
-    //matrix_print(3,1,Tc_updated);
-    //matrix_print(3,3,Kmatrix);
+    cout<<"NumofReproject" << NumofReprojectPts <<"reprojection error " <<error3/NumofReprojectPts<<endl;
     
-    double error3 =  CameraReprojectError(NumofReproject, updated_rotation , Tc_updated , FeaturePts.mv3ProjectionPts ,FeaturePts.mv2ReprojectPts ,  Kmatrix);
-   
-    cout<<"NumofReproject" << NumofReproject <<"reprojection error " <<error3/NumofReproject<<endl;
+    matrix_print(3,1,Tc_updated);
     
-       
     // update new camera pose data
-   
+    
     LoadKMatrix(Kmatrix,(int) KMatrix.size()-1);
     LoadTcMatrix(Tc_updated);
     LoadRotcMatrix(updated_rotation);
     
-    LoadTriKmatrix(Kmatrix,(int) KMatrix.size()-1);
+    LoadTriKmatrix(Kmatrix,(int) mtriKmatrix.size()-1);
     LoadTriTcmatrix(Tc_updated);
     LoadTriRotmatrix(updated_rotation);
     
@@ -208,10 +217,10 @@ void CameraPose::Egomotion(double* R, double*T, FeaturePts FeaturePts)
     delete [] Rpre;
     delete [] Tpre;
     delete [] Kmatrix;
-
+    
 }
- void  CameraPose:: TwoDalighment(int NumofReproject , double*Rot, double*trans, vector<v3_t> P__3DSolvedforparameters, 
-                                vector<v2_t> P__2DSolvedforparameters, double* Tcmatrix)
+void  CameraPose:: TwoDalighment(int NumofReproject , double*Rot, double*trans,  v3_t* P__3DSolvedforparameters, 
+                                 v2_t* P__2DSolvedforparameters, double* Tcmatrix)
 {
     
 # define _2d_aligh 2
@@ -219,16 +228,18 @@ void CameraPose::Egomotion(double* R, double*T, FeaturePts FeaturePts)
     double* Kmatrix = new double [9];
     
     PopKMattix((int) KMatrix.size()-1, Kmatrix) ;  
-
+    
+    //matrix_print(3,3,Kmatrix);
+    
     v3_t *_3Dpt = new v3_t [NumofReproject];
     v2_t *_2Dpt = new v2_t [NumofReproject];
-
+    
     double Tt[3]; 
     double Rott[9];
     double R_t[3]; 
     double Rott_transpose[9];
     double R_t_T[3];
-
+    
     memcpy(Rott, Rot, 9*sizeof(double));
     memcpy(Tt, trans, 3*sizeof(double));
     
@@ -236,28 +247,28 @@ void CameraPose::Egomotion(double* R, double*T, FeaturePts FeaturePts)
     
     for(int i=0;i<NumofReproject;i++)
     {
-      double X3D[3],q[3];
+        double X3D[3],q[3];
         
-      X3D[0]= P__3DSolvedforparameters[i].p[0]; 
-      X3D[1]= P__3DSolvedforparameters[i].p[1]; 
-      X3D[2]= P__3DSolvedforparameters[i].p[2];
+        X3D[0]= P__3DSolvedforparameters[i].p[0]; 
+        X3D[1]= P__3DSolvedforparameters[i].p[1]; 
+        X3D[2]= P__3DSolvedforparameters[i].p[2];
         
-      matrix_product(3, 3, 3, 1, Rott, X3D, q);
+        matrix_product(3, 3, 3, 1, Rott, X3D, q);
         
-      q[0] -=R_t[0]; q[1] -=R_t[1]; q[2] -=R_t[2];    
-      
-      _3Dpt[i].p[0]=q[0]; _3Dpt[i].p[1]=q[1]; _3Dpt[i].p[2]=q[2];
+        q[0] -=R_t[0]; q[1] -=R_t[1]; q[2] -=R_t[2];    
         
-      _2Dpt[i].p[0]= P__2DSolvedforparameters[i].p[0]/Kmatrix[0]; 
-      _2Dpt[i].p[1]= P__2DSolvedforparameters[i].p[1]/Kmatrix[4]; 
+        _3Dpt[i].p[0]=q[0]; _3Dpt[i].p[1]=q[1]; _3Dpt[i].p[2]=q[2];
         
-      //cout<<  _3Dpt[i].p[0]<<" "<< _3Dpt[i].p[1]<<" "<< _3Dpt[i].p[2]<<endl;
-      //cout<<  _2Dpt[i].p[0]<<" "<<_2Dpt[i].p[1]<<endl;
+        _2Dpt[i].p[0]= P__2DSolvedforparameters[i].p[0]/Kmatrix[0]; 
+        _2Dpt[i].p[1]= P__2DSolvedforparameters[i].p[1]/Kmatrix[4]; 
+        
+        //cout<<  _3Dpt[i].p[0]<<" "<< _3Dpt[i].p[1]<<" "<< _3Dpt[i].p[2]<<endl;
+        //cout<<  _2Dpt[i].p[0]<<" "<<_2Dpt[i].p[1]<<endl;
     }
     
     double Parameter_vec[3];
     
-    DeltaVector_Ransac( _2Dpt, _3Dpt, NumofReproject , Parameter_vec, 150 , 0.1);
+    DeltaVector_Ransac( _2Dpt, _3Dpt, NumofReproject , Parameter_vec, 100 , 0.1);
     
     //double TR[3];
     matrix_transpose(3, 3, Rott, Rott_transpose);
@@ -275,7 +286,7 @@ void CameraPose::Egomotion(double* R, double*T, FeaturePts FeaturePts)
     
     memcpy(Tcmatrix, trans, 3*sizeof(double));
     //cout<<"alightment result"<<endl;
-
+    
     delete [] _3Dpt;
     delete [] _2Dpt;
     delete [] Kmatrix;
@@ -284,7 +295,7 @@ void CameraPose::Egomotion(double* R, double*T, FeaturePts FeaturePts)
 
 void  CameraPose:: DeltaVector_Ransac(v2_t* _2Dpt, v3_t* _3Dpt, int size_ , double *Parameter_vec, int Ransac_runs, double error)
 {
-   
+    
 # define  MIN_NUM_PT 3
     
     double Minerror=  999999;
@@ -316,13 +327,13 @@ void  CameraPose:: DeltaVector_Ransac(v2_t* _2Dpt, v3_t* _3Dpt, int size_ , doub
                         break;
                     }
                 }
-                 repeat++;
+                repeat++;
                 if(repeat==800)
                 {
                     cout<<" not enough points"<<endl;
                     break;
                 }
-                    
+                
             } 
             while (reselect);
             
@@ -335,13 +346,13 @@ void  CameraPose:: DeltaVector_Ransac(v2_t* _2Dpt, v3_t* _3Dpt, int size_ , doub
         /* Find out 3D point delta vector* Lef-> right */
         
         deltavector(_pts_2D, _pts_3D, Parameter_vec_temp);
-       // matrix_print(3,1, Parameter_vec_temp);
+        // matrix_print(3,1, Parameter_vec_temp);
         
         double Error_2Ddis=0;
         
         for (int i=0;i<size_;i++)
         {
-             
+            
             Error_2Ddis +=  Euclidence_3D(_2Dpt[i],_3Dpt[i],Parameter_vec_temp);
         }
         
@@ -374,8 +385,8 @@ void  CameraPose:: DeltaVector_Ransac(v2_t* _2Dpt, v3_t* _3Dpt, int size_ , doub
 
 double CameraPose :: Euclidence_3D (v2_t _2Dpt, v3_t _3Dpt, double* Parameter_vec)
 {
-    double *temp= new double [3];  
-    double *result= new double[2];
+    double *temp   = new double [3];  
+    double *result = new double[2];
     double error;
     
     temp[0]= _3Dpt.p[0]-Parameter_vec[0];
@@ -437,17 +448,28 @@ void CameraPose:: deltavector(v2_t* _2Dpt,  v3_t* _3Dpt, double* Parametrvec_)
     
 }
 
-double CameraPose :: TriangulationN_Frames(FeaturePts& Pts)
+void CameraPose :: TriangulationN_Frames(vector<vector<v2_t> > mv2_location /*2D points location*/ , 
+                                           vector<vector<int> >  mv2_frame /*frame number*/, 
+                                           vector<v3_t>& v3Pts/*triangulation output*/ , 
+                                           vector<bool>& boolvector /*save array for refinement*/)     
 {    
-    int NumPts = (int) Pts.mv2_location.size();
+    int NumPts = (int)mv2_location.size();
     
-    //v3_t* _3Dpts = new v3_t[NumPts];
     vector<v3_t> _3Dpts;
+    _3Dpts.reserve(NumPts);
+    
+    vector<bool> tempvector(NumPts,0);
+      
+    //for (int i=0;i<NumPts;i++)
+    //    tempvector.push_back(false);
+    //fill(tempvector.begin(), tempvector.end(), 0);
+    //cout<<tempvector1[0]<<tempvector1[100]<<endl;
+    
     
     for(int i=0;i< NumPts;i++)
     {
         
-        int num_frame= (int)Pts.mv2_frame[i].size();  // read number of frame in the list //
+        int num_frame= (int)mv2_frame[i].size();  // read number of frame in the list //
         v2_t *pv = new v2_t[num_frame];
         double *Rs= new double [9*  num_frame];
         double *ts = new double[3 * num_frame];
@@ -455,15 +477,15 @@ double CameraPose :: TriangulationN_Frames(FeaturePts& Pts)
         for (int j=0; j<num_frame ;j++)
             // for (int i=0; i<2;i++)
         {
-            int N = (int) Pts.mv2_frame[i][j];
-            double Pt3[3]= {Pts.mv2_location[i][j].p[0], Pts.mv2_location[i][j].p[1], 1.0};
+            int N =  mv2_frame[i][j];
+            double Pt3[3]= {mv2_location[i][j].p[0], mv2_location[i][j].p[1], 1.0};
             double Translation_Scaled [3];
             double Translated [3];
             double K [9];
             double Kinv [9];
             double Rotation[9];
             double Tc[3];
-            
+           
             PopTriKMattix(N, K);  
             /* Get_focal_length* i is ith camera's parameters*/ 
             //cout<<"T vector"<<endl;       
@@ -483,6 +505,7 @@ double CameraPose :: TriangulationN_Frames(FeaturePts& Pts)
             PopTriTcMatrix(N,Tc);
             matrix_product(3,3,3,1,Rotation,Tc,Translated);
             matrix_scale(3,1,Translated,-1.0,Translation_Scaled); 
+            
             memcpy(ts + 3 * j,Translation_Scaled, 3 * sizeof(double));
             
         }
@@ -491,48 +514,34 @@ double CameraPose :: TriangulationN_Frames(FeaturePts& Pts)
         
         v3_t pt = triangulate_n (num_frame, pv, Rs, ts, &error);
         
-       _3Dpts.push_back(pt); 
+        _3Dpts.push_back(pt); 
         
-      delete [] Rs;
-      delete [] ts;
-      delete [] pv;
+        delete [] Rs;
+        delete [] ts;
+        delete [] pv;
     }
-     bool* tempvector = new bool [NumPts];
     
-     for (int i=0;i<NumPts;i++)
-           tempvector[i]= false;
-     
+    //bool* tempvector = new bool [NumPts];
+    
+    //for (int i=0;i<NumPts;i++)
+    //    tempvector[i]= false;
+       
     RefineN_FramePoints( _3Dpts , NumPts, tempvector);
     
-    int shift_index=0;
-    for(int i=0;i< NumPts; i++)
-    {
-        if(tempvector[i]== true)
-        {
-          int removal_index =i;
-          removal_index -=  shift_index;
-          _3Dpts.erase(_3Dpts.begin()+removal_index);
-          Pts.mv2_frame.erase(Pts.mv2_frame.begin()+removal_index);
-          Pts.mv2_location.erase(Pts.mv2_location.begin()+removal_index);
-          shift_index++;
-        }   
-     }
+    //for (int i=0;i<NumPts;i++)
+    //    boolvector.push_back(tempvector[i]);
     
-    int indx= (int)_3Dpts.size();
+    cout<<"before "<< mv2_frame.size()<<" "<<mv2_location.size() <<endl;
     
-    Pts._3DLocation.insert(Pts._3DLocation.end(),_3Dpts.begin(),_3Dpts.end());
-    Pts.m_3Dpts.swap(_3Dpts);
-      
-    delete [] tempvector;
-    
-    //cout<<"test"<<endl;
-    //return(_2D_error);
+    v3Pts.swap(_3Dpts);   // update 3D points 
+    boolvector.swap(tempvector) ;
+
 }
-void RefineN_FramePoints(vector<v3_t>_3DPts, int NumPts, bool* tempvector)
+void RefineN_FramePoints(vector<v3_t> _3DPts, int NumPts, vector<bool>& tempvector)
 {
     /// check Cheirality
     for (int i=0;i<NumPts;i++)
-     {
+    {
         if(CheckCheirality(_3DPts[i]))
         { 
             tempvector[i]= true;
@@ -540,10 +549,10 @@ void RefineN_FramePoints(vector<v3_t>_3DPts, int NumPts, bool* tempvector)
     }
     
     // check depth //
-    _3DdepthRefine(_3DPts,tempvector, NumPts);
+    _3DdepthRefine(_3DPts, tempvector, NumPts);
     
- }
-void _3DdepthRefine (vector<v3_t> m_3Dpts, bool* tempvector, int num_ofrefined_pts)
+}
+void _3DdepthRefine (vector<v3_t> m_3Dpts, vector<bool>& tempvector, int num_ofrefined_pts)
 {
     
     int size_= num_ofrefined_pts;
@@ -607,7 +616,7 @@ void _3DdepthRefine (vector<v3_t> m_3Dpts, bool* tempvector, int num_ofrefined_p
         float a=-fabs(x-depth)*(1./(1.06*(sqrt(varince))*2.1));
         //float density = exp(a);
         densitytemp[i]=exp(a);
-        if (densitytemp[i]<0.3)
+        if (densitytemp[i]<0.65)
             tempvector[i] = true;
     }
     
@@ -629,10 +638,10 @@ float Variance (vector<v3_t> _3Dpts, const float depth , const int size_)
             num++;
         }
     }
-     
+    
     delete [] tempz;
     return( sum *= 1. / num );
-
+    
 }
 
 void DumpPointsToPly(char *output_directory, vector<v3_t> points
@@ -677,7 +686,6 @@ bool CheckCheirality(v3_t pt)
     bool Cheirality=false;
     if(pt.p[2]>0)
         Cheirality=true;
-        return(Cheirality);
+    return(Cheirality);
 }
-
 

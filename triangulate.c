@@ -133,7 +133,7 @@ void triangulate_n_residual(const int *m, const int *n,
 v3_t triangulate_n_refine(v3_t pt, int num_points, 
                           v2_t *p, double *R, double *t, double *error_out) 
 {
-    int num_eqs = 2 * num_points;
+    int num_eqs =  2 * num_points;
     int num_vars = 3;
     
     double x[3] = { Vx(pt), Vy(pt), Vz(pt) };
@@ -173,6 +173,9 @@ v3_t triangulate_n_refine(v3_t pt, int num_points,
         *error_out = error;
     }
     
+    free (global_Rs);
+    free (global_ps);
+    free (global_ts);
     return v3_new(x[0], x[1], x[2]);
 }
 
@@ -243,7 +246,7 @@ v3_t triangulate_n(int num_points,
     global_num_points = num_points;
     global_ps = p;
     global_Rs = R;  global_ts = t;
-    lmdif_driver(triangulate_n_residual, num_eqs, num_vars, x, 1.0e-8);
+    lmdif_driver(triangulate_n_residual, num_eqs, num_vars, x, 1.0e-12);
   
     r = v3_new(x[0], x[1], x[2]);
     

@@ -24,9 +24,9 @@ bool CheckCheirality(v3_t _3DPts);
 
 float Variance (vector<v3_t> m_3Dpts, const  float depth , const int size_);
 
-void  _3DdepthRefine (vector<v3_t> _3Dpts, bool* tempvector, int NumPts);
+void  _3DdepthRefine (vector<v3_t> m_3Dpts, vector<bool>& tempvector, int num_ofrefined_pts);
 
-void RefineN_FramePoints(vector<v3_t> _3DPts, int NumPts, bool*tempvector);
+void RefineN_FramePoints(vector<v3_t> _3DPts, int NumPts, vector<bool>& tempvector);
 
 float  Variance (vector<v3_t> _3Dpts, const float depth , const int size_);
 
@@ -53,20 +53,21 @@ typedef  struct
 } TMat;
 
 double ReprojectionError();
+
 class CameraPose
 {
-    friend class EpipolarGeometry;
+    //friend class EpipolarGeometry;
     
     public:
-    
     vector <RotMat> mRcMatrix;
     vector <TMat>   mTcMatrix;
     vector <Kmat>   KMatrix;
     
-    vector<RotMat>mtriRotmatrix;
-    vector<TMat>mtriTcmatrix;
-    vector<Kmat>mtriKmatrix;
-    
+    vector<RotMat>  mtriRotmatrix;
+    vector<TMat>    mtriTcmatrix;
+    vector<Kmat>    mtriKmatrix;
+
+       
     inline void LoadTriRotmatrix(double* R )
     {
         RotMat tempR;
@@ -106,7 +107,7 @@ class CameraPose
     
     inline void InitializeFirstTwoKMatrix(double* K1Matrix, double*K2Matrix)
     {
-        Kmat temp1 ;
+        Kmat temp1;
         Kmat temp2;
         
         memcpy( temp1.n , K1Matrix, 9* sizeof(double));
@@ -204,7 +205,7 @@ class CameraPose
         return((int) mRcMatrix.size());
     }
 
-    void Egomotion(double *R_relative, double* T_relative , FeaturePts FeaturePts);
+    void Egomotion(double *R_relative, double* T_relative , vector<v3_t> v3ProjectPts, vector<v2_t> v2ReprojectPts );
     
     void PrintRotmatrix(int i);
     
@@ -212,14 +213,17 @@ class CameraPose
     
     void PrintKmatrix(int i);
     
-    void TwoDalighment( int NumofProject, double*Rot, double*trans, vector<v3_t> P__3DSolvedforparameters, 
-                       vector<v2_t> P__2DSolvedforparameters, double *Tcmatrix);
+    void TwoDalighment( int NumofProject, double*Rot, double*trans, v3_t* P__3DSolvedforparameters, 
+                       v2_t* P__2DSolvedforparameters, double *Tcmatrix);
   
     
-    double CameraReprojectError(int NumPts, double *R, double* Tc, vector<v3_t> Pts,vector<v2_t> Projpts, double * Kmatrix);
+    double CameraReprojectError(int NumPts, double *R, double* Tc, v3_t* Pts, v2_t* Projpts, double * Kmatrix);
     
-    double TriangulationN_Frames(FeaturePts& Pts);
+    //double TriangulationN_Frames(FeaturePts* Pts);
    
+     void TriangulationN_Frames(vector<vector<v2_t> > mv2_location /*2D points location*/ ,  vector<vector<int> >  mv2_frame /*frame number*/, 
+               vector<v3_t>& v3Pts/*triangulation output*/ , 
+               vector<bool>&  tempvector /*save array for refinement*/); 
     
     //inline void PopRotmatirx(double* R);
     //inline void PopTmatrix(double* T);

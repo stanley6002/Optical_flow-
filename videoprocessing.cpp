@@ -59,30 +59,35 @@ VideoProcessing:: VideoProcessing (int Width , int Height)
 
 IplImage* VideoProcessing :: CaptureInitialFrame(CvCapture* camCapture)
 {
-  
+    
+    
+    vector<cv::Point2f> cornerfirst, cornersecond;
+
     if (count_frame)
     {   
        
         frame = cvQueryFrame(camCapture);
         
-        Image2=cvCloneImage(frame);
+        Image2= cvCloneImage(frame);
         
         cvCvtColor(Image1,imgGray1, CV_BGR2GRAY);  
         cvCvtColor(Image2,imgGray2, CV_BGR2GRAY);
-        
+       
         goodFeaturesToTrack(imgGray1, cornerfirst,  400, 0.001, 16);
         goodFeaturesToTrack(imgGray2, cornersecond, 400, 0.001, 16);
         
+        cout<< cornerfirst.size()<<" "<<cornersecond.size()<<endl;
     
-    if ((int) cornerfirst.size() > cornersecond.size())
+    if ((int) cornerfirst.size() >= cornersecond.size())
     { 
         frame = Image1;
-        //cout<<"captured first frame"<<endl;
+        cout<<"captured first frame"<<endl;
+   
     }
     else
     {
         frame = Image2;
-        //cout<<"captured second frame"<<endl;
+        cout<<"captured second frame"<<endl;
     }
     
         count_frame= FALSE;
@@ -109,6 +114,7 @@ VideoProcessing::~VideoProcessing()
     cvReleaseImage(&Image2);
     cvReleaseImage(&imgGray1);
     cvReleaseImage(&imgGray2);
+    cvReleaseImage(&frame);
 
     
 }

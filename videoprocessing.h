@@ -43,9 +43,6 @@ private:
  
     bool count_frame; 
     
-  
-    
-    vector<cv::Point2f> cornerfirst, cornersecond;
-    
+     
     //bool countFrameRest;
 };

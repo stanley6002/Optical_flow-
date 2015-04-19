@@ -103,6 +103,7 @@ public:
     
     friend void test();
 private:
+    
     bool TwoviewTria;
     bool skipFrame;
     int num_trial_Fmatrix;
