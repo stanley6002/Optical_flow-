@@ -1,4 +1,4 @@
-//
+ //
 //  Relative_Pose.cpp
 //  Optical_flow 
 //
@@ -39,6 +39,7 @@ double CameraPose:: CameraReprojectError(int NumPts, double *R, double* Tc, v3_t
         
         //cout<< Vx(Projpts[i])<<" "<<Vy(Projpts[i])<<" "<< xij[0]<<" "<<xij[1]<<endl;   
         error += sqrt(dx * dx + dy * dy);
+        cout<< Vx(Projpts[i])<<" "<<Vy(Projpts[i])<<" "<< xij[0]<<" "<<xij[1]<<" "<< sqrt(dx * dx + dy * dy) <<endl;
     }
     return(error);
 }
@@ -147,8 +148,9 @@ void CameraPose::Egomotion(double* R, double*T, vector<v3_t> v3ProjectPts, vecto
     cout<<"Previous"<<endl;
     cout<<Tpre[0]<<" "<<Tpre[1]<<" "<<Tpre[2]<<endl;
     
-    matrix_product33(R_relative, Rpre, updated_rotation);           // RotCurrent * RotPrevious // 
-    //matrix_product33(Rpre, R_relative, updated_rotation); 
+             // RotCurrent * RotPrevious // 
+    
+    matrix_product33(Rpre,R_relative, updated_rotation); 
     matrix_transpose_product(3, 3, 3, 1, R_relative, Tpre , fin_t); // ( update  -Ri'*Center of previsous frame )
     
     
@@ -170,8 +172,8 @@ void CameraPose::Egomotion(double* R, double*T, vector<v3_t> v3ProjectPts, vecto
     
     
     double Tc_updated[3];
-    double error1 =  CameraReprojectError( NumofReprojectPts, updated_rotation, updated_t , mv3ProjectPts , mv2ReprojectPts ,  Kmatrix);
-    cout<<"reprojection error no alightment  " <<error1/NumofReprojectPts<<endl;    
+    //double error1 =  CameraReprojectError( NumofReprojectPts, updated_rotation, updated_t , mv3ProjectPts , mv2ReprojectPts ,  Kmatrix);
+    //cout<<"reprojection error no alightment  " <<error1 / NumofReprojectPts<<endl;    
 
     // this part alight the 3D point with delat vector//   
     TwoDalighment(NumofReprojectPts, updated_rotation , updated_t , mv3ProjectPts, mv2ReprojectPts, Tc_updated);
@@ -198,7 +200,7 @@ void CameraPose::Egomotion(double* R, double*T, vector<v3_t> v3ProjectPts, vecto
   
      double error3 =  CameraReprojectError(NumofReprojectPts, updated_rotation , Tc_updated , mv3ProjectPts ,mv2ReprojectPts ,  Kmatrix);
     
-    cout<<"NumofReproject" << NumofReprojectPts <<"reprojection error " <<error3/NumofReprojectPts<<endl;
+    cout<<"NumofReproject" << NumofReprojectPts <<"reprojection error " <<error3/ NumofReprojectPts <<endl;
     
     matrix_print(3,1,Tc_updated);
     
@@ -676,7 +678,7 @@ void DumpPointsToPly(char *output_directory, vector<v3_t> points
     {
         
         /* Output the vertex */
-        fprintf(f, "%0.6f %0.6f %0.6f\n", points[i].p[0],points[i].p[1],points[i].p[2]);
+        fprintf(f, "%0.6f %0.6f %0.6f\n", points[i].p[0],(-1)*points[i].p[1],points[i].p[2]);
     }
     
     fclose(f);

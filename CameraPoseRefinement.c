@@ -27,6 +27,7 @@ static  v3_t *GLOBAL_points;
 static double *GLOBAL_Rot;
 static double *GLOBAL_Tc;
 static double *GLOBAL_Kmatrix;
+static int GLOBAL_focus_weight;
 //static int sw =0;
 //static int revert;
 
@@ -63,8 +64,10 @@ static void Sing_camera_refine(int num_points, v3_t *points, v2_t *projs, double
     
     
 #ifdef EstimateFocu
+    GLOBAL_focus_weight= 1 ;
+    
     double x[7] = {0.0, 0.0, 0.0, GLOBAL_Tc[0], GLOBAL_Tc[1], GLOBAL_Tc[2],GLOBAL_Kmatrix[0]};  
-    lmdif_driver2( CameraReprojectionError, 2 * num_points, 7 , x, 1.0e-12);     
+    lmdif_driver2( CameraReprojectionError, 2 * num_points+1 , 7 , x, 1.0e-12);     
     
     double Rnew[9];
     double Tnew[3];
@@ -132,6 +135,7 @@ static void Sing_camera_refine(int num_points, v3_t *points, v2_t *projs, double
 static void CameraReprojectionError(const int *m, const int *n, 
                                     double *x, double *fvec, int *iflag) 
 {
+    
     int i;
     double error3 = 0.0;
     
@@ -158,10 +162,46 @@ static void CameraReprojectionError(const int *m, const int *n,
         fvec[2 * i + 0] = dx;
         fvec[2 * i + 1] = dy;
         
+        double focus_difference = GLOBAL_Kmatrix[0] - x[6];
+        //fvec[2 * GLOBAL_num_pts] =  GLOBAL_focus_weight * focus_difference;
         
     }
     //    printf(" %f \n",error3 );
+
+#ifdef EstimateFocu
     
+    //int i;
+    //double error3 = 0.0;
+    
+    //double error_temp;
+    for (int i = 0; i < GLOBAL_num_pts; i++)
+    {
+        double pt[3] = {
+            Vx(GLOBAL_points[i]), 
+            Vy(GLOBAL_points[i]),
+            Vz(GLOBAL_points[i]) 
+        };
+        
+        double proj[2], dx, dy;
+        
+        CameraProjectPoint (x /*updated rotation*/ , pt /*3D*/, proj);
+        
+        dx = Vx(GLOBAL_proj[i]) - proj[0];
+        dy = Vy(GLOBAL_proj[i]) - proj[1];
+        
+        //printf(" %f %f %f %f \n",Vx(GLOBAL_proj[i]), Vy(GLOBAL_proj[i]), proj[0], proj[1]);
+        
+        error3 = sqrt(dx * dx + dy * dy);
+        
+        fvec[2 * i + 0] = dx;
+        fvec[2 * i + 1] = dy;
+        
+        double focus_difference = GLOBAL_Kmatrix[0] - x[6];
+        fvec[2 * GLOBAL_num_pts] =  GLOBAL_focus_weight * focus_difference;
+        
+    }
+    //    printf(" %f \n",error3 );
+#endif    
 }
 static void CameraProjectPoint(double *aj, double *bi, 
                                double *xij)

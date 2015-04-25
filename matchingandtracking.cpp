@@ -187,9 +187,9 @@ void LKFeatures::  LKFeaturesTracking ()
    if (UseOptical_flow)
    {
        
-       goodFeaturesToTrack(ImageGray1, corners, 400, 0.001, 10);
+       goodFeaturesToTrack(ImageGray1, corners, 400, 0.001, 9);
        cornerSubPix( ImageGray1, corners, cv::Size(9,9) , cv::Size(-1,-1) , cv::TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 0.001 ));
-       calcOpticalFlowPyrLK(ImageGray1, ImageGray2, corners, nextPts, status, err, cv::Size(25,25));
+       calcOpticalFlowPyrLK(ImageGray1, ImageGray2, corners, nextPts, status, err, cv::Size(30,30));
    }
    else
    {

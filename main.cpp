@@ -17,7 +17,8 @@
 #include "miscul.h"
 #include "OpenglPlot.h"
 //#include "FeaturePoint.h"
-#include "Relative_Pose.h"
+//#include "Relative_Pose.h"
+#include "RunSFM_Main.hpp"
 
 
 CvCapture *camCapture;
@@ -162,9 +163,9 @@ int main (int argc, const char * argv[])
                     
                     int numTrialFmatrix = 30;
                     int numTrialRelativePose = 20;
-                    int Focuslength= 340;
+                    int Focuslength= 300;
                     int Ransac_threshold= 2.0;
-                    float MaxAngle = 0.060;
+                    float MaxAngle = 0.055;
                    
                     EpipolarGeometry EpipolarGeometry(match_query, match_train, size_match, numTrialFmatrix, numTrialRelativePose, Focuslength, Ransac_threshold);  
                     EpipolarGeometry.FindFundamentalMatrix(); 
@@ -247,6 +248,17 @@ int main (int argc, const char * argv[])
                             
                             FeaturePts.PointRefinement(Tempv3Dpts, tempvector);
                             
+                            double error = RunSFM_Nviews_Main( (int)Tempv3Dpts.size()/*number of 3D pts */, 
+                                                      3, 
+                                                      0,                   
+                                                      CameraPose. mtriRotmatrix,     /*camera rotation matrix*/
+                                                      CameraPose. mtriTcmatrix,      /*camera translation matrix*/
+                                                      CameraPose. mtriKmatrix,       /*camera instrinstic matrix*/ 
+                                                      FeaturePts. mv2_location /*2D points location*/ , 
+                                                      FeaturePts. mv2_frame    /*frame number*/, 
+                                                      Tempv3Dpts                /*triangulation output*/);
+
+                            
                             cout<< FeaturePts.mv2_frame.size()<<endl;
                                                         
                             //int idx= CameraPose.mtriTcmatrix.size();
@@ -258,13 +270,15 @@ int main (int argc, const char * argv[])
                             vector<v3_t> V3Dpts;   
                             
                             loop++;
-                            if (loop > 15)
+                            if (loop >15 )
                             {
                               DumpPointsToPly("/Users/chih-hsiangchang/Desktop/Archive/result.ply", FeaturePts. _3DLocation
                                             , FeaturePts. _3DLocation.size());
                                 break;
                              }
+                            
                                                     
+                            
                             FeaturePts. UpdatedFeatureTrack(left_pts,right_pts, V3Dpts, FrameNum);
                             
                             
@@ -287,9 +301,9 @@ int main (int argc, const char * argv[])
                             //matrix_print(3,1,T);
                            
                              
-                             OpenGLPlot. Setview(V3Dpts);
+                             OpenGLPlot. Setview(FeaturePts. _3DLocation);
                            
-                            // OpenGLPlot. PlotCamera(T);
+                             OpenGLPlot. PlotCamera(T);
                             
                             //OpenGLPlot. PlotVertex(EpipolarGeometry.NumofPts(), V3Dpts); 
                             //OpenGLPlot.PlotVertex((int) V3Dpts.size() , V3Dpts);

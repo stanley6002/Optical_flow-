@@ -223,7 +223,7 @@ void FeaturePts::PointRefinement(vector<v3_t> &  Tempv3Dpts, vector <bool> tempv
             }   
         }
        
-       cout<<" after" <<mv2_frame.size()<<" "<<mv2_location.size() <<endl;
+        cout<<" after" <<mv2_frame.size()<<" "<<mv2_location.size() <<endl;
      
         _3DLocation.insert(_3DLocation.end(),Tempv3Dpts.begin(),Tempv3Dpts.end());
         m_3Dpts.swap(Tempv3Dpts);
