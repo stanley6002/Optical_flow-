@@ -35,7 +35,7 @@ typedef struct {
     double f;        /* Focal length */
     double k[2];     /* Undistortion parameters */
     double k_inv[POLY_INVERSE_DEGREE]; /* Inverse undistortion parameters */
-    char constrained[NUM_CAMERA_PARAMS];
+    char constrained[NUM_CAMERA_PARAMS]; 
     double constraints[NUM_CAMERA_PARAMS];  /* Constraints (if used) */
     double weights[NUM_CAMERA_PARAMS];      /* Weights on the constraints */
     double K_known[9];  /* Intrinsics (if known) */

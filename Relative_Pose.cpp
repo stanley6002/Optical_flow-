@@ -5,14 +5,14 @@
 //  Created by chih-hsiang chang on 4/1/15.
 //  Copyright 2015 __MyCompanyName__. All rights reserved.
 //
+//  for other multiple frame remove and modify the trimatrix
 
+# define MiniDensity 0.65
 #include "Relative_Pose.h"
 //#include "CameraPoseRefinement.h"
 
 double CameraPose:: CameraReprojectError(int NumPts, double *R, double* Tc, v3_t* Pts,v2_t* Projpts, double * Kmatrix)
 {
-    
-    
     double error =0;
     for(int i  =0;i< NumPts;i++)
     {
@@ -39,11 +39,36 @@ double CameraPose:: CameraReprojectError(int NumPts, double *R, double* Tc, v3_t
         
         //cout<< Vx(Projpts[i])<<" "<<Vy(Projpts[i])<<" "<< xij[0]<<" "<<xij[1]<<endl;   
         error += sqrt(dx * dx + dy * dy);
-        cout<< Vx(Projpts[i])<<" "<<Vy(Projpts[i])<<" "<< xij[0]<<" "<<xij[1]<<" "<< sqrt(dx * dx + dy * dy) <<endl;
+        //cout<< Vx(Projpts[i])<<" "<<Vy(Projpts[i])<<" "<< xij[0]<<" "<<xij[1]<<" "<< sqrt(dx * dx + dy * dy) <<endl;
     }
     return(error);
 }
-
+double CameraPose:: ReprojectionError(double *R, double* Tc, v3_t Pts, v2_t Projpts, double * Kmatrix)
+{
+        double error =0;
+        double b2[3];  
+        double b_cam[3];
+        double b_proj[3];
+        double xij[2];   
+        //K*[R|-Rtc]X//
+        //K*R*[X-tc] //
+        
+        b2[0] = Pts.p[0] - Tc[0];
+        b2[1] = Pts.p[1] - Tc[1];
+        b2[2] = Pts.p[2] - Tc[2];
+        
+        matrix_product331(R, b2, b_cam);  
+        
+        matrix_product331(Kmatrix, b_cam, b_proj);
+        
+        xij[0] = -b_proj[0] / b_proj[2];
+        xij[1] = -b_proj[1] / b_proj[2];
+        
+        double dx = Vx(Projpts) - xij[0];
+        double dy = Vy(Projpts) - xij[1];
+        error += sqrt(dx * dx + dy * dy);
+      return(error);
+}
 
 
 CameraPose::CameraPose()
@@ -105,12 +130,10 @@ void CameraPose::Egomotion(double* R, double*T, vector<v3_t> v3ProjectPts, vecto
          copy(v3ProjectPts.begin(), v3ProjectPts.end(), mv3ProjectPts);
          copy(v2ReprojectPts.begin(),v2ReprojectPts.end(), mv2ReprojectPts);
         
-    
-    
     //    for(int i=0;i< NumofReprojectPts;i++)
     //      {
     //         cout<<mv3ProjectPts[i].p[0]<<" "<<mv3ProjectPts[i].p[1]<<" "<<mv3ProjectPts[i].p[2]<<endl;
-    //          cout<<mv2ReprojectPts[i].p[0]<<" "<<mv2ReprojectPts[i].p[1]<<endl;
+    //         cout<<mv2ReprojectPts[i].p[0]<<" "<<mv2ReprojectPts[i].p[1]<<endl;
     //       
     //    }
     //
@@ -148,7 +171,7 @@ void CameraPose::Egomotion(double* R, double*T, vector<v3_t> v3ProjectPts, vecto
     cout<<"Previous"<<endl;
     cout<<Tpre[0]<<" "<<Tpre[1]<<" "<<Tpre[2]<<endl;
     
-             // RotCurrent * RotPrevious // 
+    // RotCurrent * RotPrevious // 
     
     matrix_product33(Rpre,R_relative, updated_rotation); 
     matrix_transpose_product(3, 3, 3, 1, R_relative, Tpre , fin_t); // ( update  -Ri'*Center of previsous frame )
@@ -183,8 +206,7 @@ void CameraPose::Egomotion(double* R, double*T, vector<v3_t> v3ProjectPts, vecto
     
     //v3_t mv3ProjectPts [NumofReproject];
     //v2_t mv2ReprojectPts[NumofReproject];
-    
-    
+
     //cout<<"points" <<(int)FeaturePts.mv3ProjectionPts.size() <<" "<<(int) FeaturePts.mv2ReprojectPts.size()<<endl;
     
     //for(int i=0;i< NumofReproject;i++)
@@ -198,7 +220,7 @@ void CameraPose::Egomotion(double* R, double*T, vector<v3_t> v3ProjectPts, vecto
     //double UpdateR[9];
     CameraRotRefine( NumofReprojectPts  , mv3ProjectPts, mv2ReprojectPts , updated_rotation , Tc_updated , Kmatrix);
   
-     double error3 =  CameraReprojectError(NumofReprojectPts, updated_rotation , Tc_updated , mv3ProjectPts ,mv2ReprojectPts ,  Kmatrix);
+    double error3 =  CameraReprojectError(NumofReprojectPts, updated_rotation , Tc_updated , mv3ProjectPts ,mv2ReprojectPts ,  Kmatrix);
     
     cout<<"NumofReproject" << NumofReprojectPts <<"reprojection error " <<error3/ NumofReprojectPts <<endl;
     
@@ -462,14 +484,8 @@ void CameraPose :: TriangulationN_Frames(vector<vector<v2_t> > mv2_location /*2D
     
     vector<bool> tempvector(NumPts,0);
       
-    //for (int i=0;i<NumPts;i++)
-    //    tempvector.push_back(false);
-    //fill(tempvector.begin(), tempvector.end(), 0);
-    //cout<<tempvector1[0]<<tempvector1[100]<<endl;
-    
-    
     for(int i=0;i< NumPts;i++)
-    {
+     {
         
         int num_frame= (int)mv2_frame[i].size();  // read number of frame in the list //
         v2_t *pv = new v2_t[num_frame];
@@ -488,7 +504,7 @@ void CameraPose :: TriangulationN_Frames(vector<vector<v2_t> > mv2_location /*2D
             double Rotation[9];
             double Tc[3];
            
-            PopTriKMattix(N, K);  
+            PopTriKMattix(N, K);    
             /* Get_focal_length* i is ith camera's parameters*/ 
             //cout<<"T vector"<<endl;       
             
@@ -527,18 +543,87 @@ void CameraPose :: TriangulationN_Frames(vector<vector<v2_t> > mv2_location /*2D
     
     //for (int i=0;i<NumPts;i++)
     //    tempvector[i]= false;
-       
+
     RefineN_FramePoints( _3Dpts , NumPts, tempvector);
-    
-    //for (int i=0;i<NumPts;i++)
-    //    boolvector.push_back(tempvector[i]);
-    
-    cout<<"before "<< mv2_frame.size()<<" "<<mv2_location.size() <<endl;
-    
+    CameraReprojctionErrorRefinement( mv2_location /*2D points location*/ ,  mv2_frame /*frame number*/, NumPts, _3Dpts, tempvector );
+   
     v3Pts.swap(_3Dpts);   // update 3D points 
     boolvector.swap(tempvector) ;
+}
+
+double CameraPose:: CameraReprojctionErrorRefinement(vector<vector<v2_t> > mv2_location /*2D points location*/ ,  vector<vector<int> >  mv2_frame /*frame number*/, int Numpts, vector<v3_t> v3Pts,  vector<bool>&  tempvector )
+{
+    int size_ = Numpts; 
+    double* error_vec= new double [size_];
+    memset(error_vec,0,size_*sizeof(double));
+    
+    int num=0;
+    double sumerr=0;
+    double mean_err;
+    
+    for (int i=0;i< Numpts;i++)
+    {
+        double err_temp = 0;
+        if (tempvector[i]==false)
+        {
+         v3_t v3pt = v3Pts[i];
+         int index = (int) mv2_frame[i].size();
+       for ( int j=0;j<index;j++)
+          {
+            
+            v2_t ProjectPts =  mv2_location[i][j];
+            int c  = mv2_frame[i][j];
+            double R[9];
+            double T[3]; 
+            double K[9];
+            
+            PopTriKMattix(c, K); 
+            PopTriRotcMatrix(c, R);
+            PopTriTcMatrix(c, T);
+               
+            err_temp += ReprojectError(R, T, v3pt , ProjectPts, K);          
+           }
+        error_vec[i] = err_temp /(int) mv2_frame[i].size();
+        num++;
+        sumerr += error_vec[i];
+        }
+    }
+        
+    mean_err= (sumerr/num);
+   
+    double sum;
+    for (int i=0;i<size_;i++)
+    {         
+      if (tempvector[i]==false)
+        {
+          float temp = (error_vec[i]-mean_err)*(error_vec[i]-mean_err);
+          sum=sum+temp;
+        }
+    }
+    float variance = sum * (1. / num);
+    for (int i=0;i<size_;i++)
+    {
+      if(tempvector[i]== false)
+      {
+          double x = error_vec[i];
+          float a=-fabs(x-mean_err)*(1./(1.06*(sqrt(variance))*2.1));
+          //float density = exp(a);
+          float density =exp(a);
+          if( x> mean_err)
+          {
+             if (density< MiniDensity)
+              {
+               tempvector[i] = true;
+               //cout<<"remove "<<" "<< x<<endl
+              }
+          }
+      }
+}
+    
+    delete [] error_vec;
 
 }
+
 void RefineN_FramePoints(vector<v3_t> _3DPts, int NumPts, vector<bool>& tempvector)
 {
     /// check Cheirality
@@ -553,7 +638,9 @@ void RefineN_FramePoints(vector<v3_t> _3DPts, int NumPts, vector<bool>& tempvect
     // check depth //
     _3DdepthRefine(_3DPts, tempvector, NumPts);
     
+    
 }
+
 void _3DdepthRefine (vector<v3_t> m_3Dpts, vector<bool>& tempvector, int num_ofrefined_pts)
 {
     
@@ -618,7 +705,7 @@ void _3DdepthRefine (vector<v3_t> m_3Dpts, vector<bool>& tempvector, int num_ofr
         float a=-fabs(x-depth)*(1./(1.06*(sqrt(varince))*2.1));
         //float density = exp(a);
         densitytemp[i]=exp(a);
-        if (densitytemp[i]<0.65)
+        if (densitytemp[i]< MiniDensity )
             tempvector[i] = true;
     }
     

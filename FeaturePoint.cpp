@@ -46,11 +46,6 @@ void FeaturePts::CreateFeatureTrack(int* tempCurrent, int ConnectedPtsize, v2_t*
             mv2_location[size_2Dlocation-1].push_back(Current_pts[i]);
         }
     }
-    
-    
-
-
-
 }
 
 // add connected feature points to existing tracks
@@ -175,7 +170,6 @@ void FeaturePts:: UpdatedFeatureTrack(vector<v2_t>& left_pts, vector<v2_t>& righ
           V3Dpts.push_back(V3pt);
          
           }
-          
     }
     //cout<< left_pts.size()<<" "<<right_pts.size()<<endl;
 }
@@ -206,25 +200,82 @@ void FeaturePts::CleanFeatureTrack()
 void FeaturePts::PointRefinement(vector<v3_t> &  Tempv3Dpts, vector <bool> tempvector)
 {
      int NumPts = (int) Tempv3Dpts.size();
+     
+    vector<vector<int> >v2_frame;
+    vector<vector<v2_t> >v2_location;
+    vector<v3_t> v3D;
+    
+    
+    vector<vector<int> > v2_frametemp;
+    
+    
+    cout<<"size of frame "<<mv2_frame.size()<<endl;
+    
+     //mv2_frame.push_back(vector<int>());
    
-   
+     cout<<" before " <<NumPts <<" "<<mv2_frame.size()<<" "<<mv2_location.size() <<endl;
      int shift_index=0;
         for(int i=0;i< NumPts; i++)
         {
-            if(tempvector[i]== true)
-            {
-                int removal_index =i;
-                removal_index -=  shift_index;
-                Tempv3Dpts.erase(Tempv3Dpts.begin()+removal_index);
-                mv2_frame.erase(mv2_frame.begin()+removal_index);
-                mv2_location.erase(mv2_location.begin()+removal_index);
- 
-                shift_index++;
-            }   
+           if(! tempvector[i])
+           {
+           
+                v3D.push_back(Tempv3Dpts[i]);
+                v2_frame.push_back(vector<int>());
+                v2_location.push_back(vector<v2_t>());
+               for (int j=0; j< mv2_frame[i].size();j++)
+               {
+               int size = (int) v2_frame.size()-1;
+               v2_frame[size].push_back(mv2_frame[i][j]);    
+               v2_location[size].push_back(mv2_location[i][j]);
+                
+               }           
+           }
+            //if(tempvector[i]== true)
+            //{
+                //int removal_index =i;
+                //removal_index -=  shift_index;
+                // Tempv3Dpts.erase(Tempv3Dpts.begin()+removal_index);
+                // mv2_frame.erase(mv2_frame.begin()+removal_index);
+                // mv2_location.erase(mv2_location.begin()+removal_index);
+                
+                //shift_index++;
+           // }   
         }
        
-        cout<<" after" <<mv2_frame.size()<<" "<<mv2_location.size() <<endl;
+        cout<<" after" << (int) Tempv3Dpts.size() <<mv2_frame.size()<<" "<<mv2_location.size() <<endl;
      
-        _3DLocation.insert(_3DLocation.end(),Tempv3Dpts.begin(),Tempv3Dpts.end());
-        m_3Dpts.swap(Tempv3Dpts);
+        //_3DLocation.insert(_3DLocation.end(),Tempv3Dpts.begin(),Tempv3Dpts.end());
+        //m_3Dpts.swap(Tempv3Dpts);
+    _3DLocation.insert(_3DLocation.end(),v3D.begin(),v3D.end());
+    
+    //cout<<"size of points "<<m_3Dpts.size()<<endl;
+    m_3Dpts.clear();
+    //cout<<"after cleaning "<<m_3Dpts.size()<<endl;
+    m_3Dpts.swap(v3D);
+    //cout<<"size of points "<<m_3Dpts.size()<<endl;
+    
+    mv2_frame.clear();
+    mv2_location.clear();
+    mv2_frame.resize((int)v3D.size(), vector<int>());
+    
+    mv2_frame.swap(v2_frame);
+    mv2_location.swap(v2_location);
+    
+    //cout<<"size of frame "<<v2_frame.size()<<endl;
+    //cout<<"size of location "<<v2_location.size()<<endl;
+    //cout<<"size of frame "<<mv2_frame.size()<<endl;
+    //cout<<"size of location "<<mv2_location.size()<<endl;
+    
+//    
+//    for (int i=0;i<(int)v3D.size() ;i++)
+//    {
+//        for(int j=0;j< mv2_frame[i].size();j++)
+//        {
+//            cout<< mv2_frame[i][j]<<" "<<mv2_location[i][j].p[0]<<" "<<mv2_location[i][j].p[1]<<" ";
+//        
+//        }
+//        cout<<endl;
+//    }
+    
 }

@@ -227,14 +227,10 @@ int main (int argc, const char * argv[])
                             
                             FeaturePts.ConnectedVideoSequence( FeaturePts.m_rightPts, EpipolarGeometry.lrefined_pt /*connected pts*/ , EpipolarGeometry.rrefined_pt  /* current pts*/ , EpipolarGeometry.num_ofrefined_pts,FrameNum);
                            
-                           
-                            
                             
                             CameraPose.Egomotion(EpipolarGeometry.R_relative, EpipolarGeometry.t_relative, FeaturePts.mv3ProjectionPts, FeaturePts.mv2ReprojectPts);
 
                             //int idx=(int) CameraPose.mtriTcmatrix.size();
-                            
-                                                    
                             //double T[3];
                             //memcpy(T, CameraPose.mTcMatrix[FrameNum].n,3*sizeof(double));
                             //matrix_print(3,1,T);
@@ -245,10 +241,11 @@ int main (int argc, const char * argv[])
                             vector<bool> tempvector;
                             
                             CameraPose.TriangulationN_Frames(FeaturePts. mv2_location , FeaturePts. mv2_frame , Tempv3Dpts , tempvector);
-                            
+                                                       
                             FeaturePts.PointRefinement(Tempv3Dpts, tempvector);
                             
-                            double error = RunSFM_Nviews_Main( (int)Tempv3Dpts.size()/*number of 3D pts */, 
+                                                      
+                            double error = RunSFM_Nviews_Main(FeaturePts.m_3Dpts.size() /*number of 3D pts */, 
                                                       3, 
                                                       0,                   
                                                       CameraPose. mtriRotmatrix,     /*camera rotation matrix*/
@@ -256,7 +253,7 @@ int main (int argc, const char * argv[])
                                                       CameraPose. mtriKmatrix,       /*camera instrinstic matrix*/ 
                                                       FeaturePts. mv2_location /*2D points location*/ , 
                                                       FeaturePts. mv2_frame    /*frame number*/, 
-                                                      Tempv3Dpts                /*triangulation output*/);
+                                                      FeaturePts.m_3Dpts                /*triangulation output*/);
 
                             
                             cout<< FeaturePts.mv2_frame.size()<<endl;
@@ -270,7 +267,7 @@ int main (int argc, const char * argv[])
                             vector<v3_t> V3Dpts;   
                             
                             loop++;
-                            if (loop >15 )
+                            if (loop > 10 )
                             {
                               DumpPointsToPly("/Users/chih-hsiangchang/Desktop/Archive/result.ply", FeaturePts. _3DLocation
                                             , FeaturePts. _3DLocation.size());
@@ -280,7 +277,6 @@ int main (int argc, const char * argv[])
                                                     
                             
                             FeaturePts. UpdatedFeatureTrack(left_pts,right_pts, V3Dpts, FrameNum);
-                            
                             
                             FeaturePts. CleanFeatureTrack();
                             

@@ -17,6 +17,8 @@
 
 //#include "FeaturePoint.h"
 
+double ReprojectError( double *R, double* Tc, v3_t Pts, v2_t Projpts, double * Kmatrix);
+
 void DumpPointsToPly(char *output_directory, vector<v3_t> points
                      ,int num_points) ;
 
@@ -221,10 +223,13 @@ class CameraPose
     
     //double TriangulationN_Frames(FeaturePts* Pts);
    
-     void TriangulationN_Frames(vector<vector<v2_t> > mv2_location /*2D points location*/ ,  vector<vector<int> >  mv2_frame /*frame number*/, 
+    void TriangulationN_Frames(vector<vector<v2_t> > mv2_location /*2D points location*/ ,  vector<vector<int> >  mv2_frame /*frame number*/, 
                vector<v3_t>& v3Pts/*triangulation output*/ , 
                vector<bool>&  tempvector /*save array for refinement*/); 
     
+    double CameraReprojctionErrorRefinement(vector<vector<v2_t> > mv2_location /*2D points location*/ ,  vector<vector<int> >  mv2_frame /*frame number*/, int Numpts, vector<v3_t> v3Pts,  vector<bool>&  tempvector );
+    
+    double ReprojectionError(double *R, double* Tc, v3_t Pts, v2_t Projpts, double * Kmatrix);
     //inline void PopRotmatirx(double* R);
     //inline void PopTmatrix(double* T);
     

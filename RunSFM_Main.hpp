@@ -13,7 +13,7 @@ using namespace std;
 
 #define NUM_CAMERA_PARAMS 9
 #define POLY_INVERSE_DEGREE 6
-
+double ReprojectError( double *R, double* Tc, v3_t Pts, v2_t Projpts, double * Kmatrix);
 //typedef struct {
 //    double R[9];     /* Rotation */
 //    double t[3];     /* Translation */
@@ -63,7 +63,12 @@ double RunSFM_Nviews_Main(int num_pts /*number of 3D pts */,
                           vector<v3_t>& v3Pts                /*triangulation output*/);
 
 double RunSFM_Nviews(int num_pts, int num_cameras, int start_camera, int Numofframe, 
-                     bool fix_points, camera_params_t *init_camera_params, double eps2, 
+                     camera_params_t *init_camera_params, v3_t* sfm3Dpts ,
+                     char* vmask, double* projections,  
+                     bool EstimateFocal, bool UseFocalconstraints,  bool fix_focal, 
+                     bool Explictcenter, bool fix_points, bool UsePointConstraint, 
+                     bool EstimateDistortion,
+                     int nz_count ,double eps2, 
                      double *S, double *U, double *V, double *W,
                      bool remove_outliers);
 
