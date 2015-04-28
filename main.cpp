@@ -274,8 +274,6 @@ int main (int argc, const char * argv[])
                                 break;
                              }
                             
-                                                    
-                            
                             FeaturePts. UpdatedFeatureTrack(left_pts,right_pts, V3Dpts, FrameNum);
                             
                             FeaturePts. CleanFeatureTrack();
