@@ -216,7 +216,7 @@ class CameraPose
     void PrintKmatrix(int i);
     
     void TwoDalighment( int NumofProject, double*Rot, double*trans, v3_t* P__3DSolvedforparameters, 
-                       v2_t* P__2DSolvedforparameters, double *Tcmatrix);
+                       v2_t* P__2DSolvedforparameters);
   
     
     double CameraReprojectError(int NumPts, double *R, double* Tc, v3_t* Pts, v2_t* Projpts, double * Kmatrix);

@@ -227,7 +227,7 @@ void run_sfm(int num_pts, int num_cameras, int ncons,   /* num_pts = 3D points*/
     camera_constraints_t *constraints = NULL;
     point_constraints_t *point_constraints = NULL;
     
-    const double f_scale = 0.01;
+    const double f_scale = 0.001 ;
     
     if (est_focal_length)
 	cnp = 7;
@@ -239,6 +239,74 @@ void run_sfm(int num_pts, int num_cameras, int ncons,   /* num_pts = 3D points*/
     num_params = num_camera_params + num_pt_params;
 
     params = (double *) safe_malloc(sizeof(double) * num_params, "params");
+    
+    if (use_constraints) 
+    {
+        constraints = 
+	    (camera_constraints_t *) 
+        malloc(num_cameras * sizeof(camera_constraints_t));	
+        
+        for (i = 0; i < num_cameras; i++) 
+        {
+            constraints[i].constrained = (char *) malloc(cnp);
+            constraints[i].constraints = 
+            (double *) malloc(sizeof(double) * cnp);
+            constraints[i].weights = (double *) malloc(sizeof(double) * cnp);
+            
+            memcpy(constraints[i].constrained, 
+                   init_camera_params[i].constrained, cnp * sizeof(char));
+            memcpy(constraints[i].constraints, 
+                   init_camera_params[i].constraints, cnp * sizeof(double));
+            memcpy(constraints[i].weights,
+                   init_camera_params[i].weights, cnp * sizeof(double));
+            
+#ifdef TEST_FOCAL
+            if (est_focal_length) 
+            {
+                constraints[i].constraints[6] *= f_scale;
+                constraints[i].weights[6] *= (1.0 / (f_scale * f_scale));
+                // constraints[i].constraints[6] *= 1;
+                // constraints[i].weights[6] *= (1.0 / (0.001 * 0.001));
+            }
+            
+           #endif
+        }
+    }
+    
+    if (use_point_constraints) 
+    {
+        point_constraints = 
+	    (point_constraints_t *) 
+        malloc(num_pts * sizeof(point_constraints_t));
+        
+        for (i = 0; i < num_pts; i++)
+        {
+            if (Vx(init_pts[i]) == 0.0 &&
+                Vy(init_pts[i]) == 0.0 &&
+                Vz(init_pts[i]) == 0.0)
+            {
+                
+                point_constraints[i].constrained = 0;
+                point_constraints[i].constraints[0] = 0.0;
+                point_constraints[i].constraints[1] = 0.0;
+                point_constraints[i].constraints[2] = 0.0;
+                point_constraints[i].weight = 0.0;
+                
+            } 
+            else 
+            {
+                // printf("[run_sfm] Constraining point %d\n", i);
+                point_constraints[i].constrained = 1;
+                point_constraints[i].weight = 0.0;
+                point_constraints[i].constraints[0] = Vx(init_pts[i]);
+                point_constraints[i].constraints[1] = Vy(init_pts[i]);
+                point_constraints[i].constraints[2] = Vz(init_pts[i]);
+            }
+        }
+    }
+
+    
+    
     
     /* Fill global param struct */
     global_params.num_cameras = num_cameras;
@@ -378,84 +446,4 @@ void run_sfm(int num_pts, int num_cameras, int ncons,   /* num_pts = 3D points*/
    // printf("V3D %f %f %f \n", Vx(init_pts[i]),Vy(init_pts[i]),Vz(init_pts[i]) );  
     }
   free(params);
-    
-//#define DEBUG_SFM
-//#ifdef DEBUG_SFM
-//    for (i = 0; i < num_cameras; i++) {
-//	int num_projs = 0;
-//	double error = 0.0;
-//	double error_max = 0.0;
-//	int idx_max = 0;
-//	double px_max = 0.0, py_max = 0.0;
-//
-//	double K[9] = { init_camera_params[i].f, 0.0, 0.0, 
-//			        0.0, init_camera_params[i].f, 0.0,
-//                    0.0, 0.0, 1.0 };
-//        
-//	double w[3] = { 0.0, 0.0, 0.0 };
-//	
-//    double dt[3] = { init_camera_params[i].t[0],
-//			         init_camera_params[i].t[1],
-//			         init_camera_params[i].t[2] };
-//
-//	// double dt[3] = { 0.0, 0.0, 0.0 };
-//
-//	for (j = 0; j < num_pts; j++) 
-//    {
-//	    double b[3], pr[2];
-//	    double dx, dy, dist;
-//
-//	    if (!vmask[j * num_cameras + i])
-//		continue;
-//
-//	    b[0] = Vx(init_pts[j]);
-//	    b[1] = Vy(init_pts[j]);
-//	    b[2] = Vz(init_pts[j]);
-//
-//	    sfm_project(&(init_camera_params[i]), K, w, dt, b, pr,1);
-//
-//	 //   dx = pr[0] - Vx(projections[j * num_cameras + i]);
-//	 //   dy = pr[1] - Vy(projections[j * num_cameras + i]);
-//
-//     //   printf("projection %f %f \n",Vx(projections[j * num_cameras + i]) ,pr[0]);
-//     //   printf("projection %f %f \n",Vy(projections[j * num_cameras + i]) ,pr[1]);
-//        
-//	    dist = dx * dx + dy * dy;
-//	    error += dist;
-//	    
-//	    if (dist > error_max) 
-//        {
-//     //		idx_max = j;
-//     //		error_max = dist;
-//     //		px_max = (projections[j * num_cameras + i]);
-//     //		py_max = (projections[j * num_cameras + i]);
-//	    }
-//	    
-//	    num_projs++;
-//	}
-//
-////	printf("Camera %d:  error = %0.3f (%0.3f)\n", i,
-////	       error, sqrt(error / num_projs));
-////	printf("           error_max = %0.3f (%d)\n", sqrt(error_max), idx_max);
-////	printf("           proj = %0.3f, %0.3f\n", px_max, py_max);
-//    }
-//   #endif /* DEBUG_SFM */
-//   // printf("__");
-//  
-//
-//#ifndef SBA_V121
-//    if (use_constraints) {
-//	for (i = 0; i < num_cameras; i++) 
-//    {
-//	    free(constraints[i].constraints);
-//	    free(constraints[i].constrained);
-//	    free(constraints[i].weights);
-//	}
-//	free(constraints);
-//    }
-//
-//    free(global_last_ws);
-//    free(global_last_Rs);
-//
-//     #endif
 }

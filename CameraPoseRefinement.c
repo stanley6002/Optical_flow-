@@ -64,6 +64,8 @@ static void Sing_camera_refine(int num_points, v3_t *points, v2_t *projs, double
     
     
 #ifdef EstimateFocu
+    GLOBAL_focus_weight= 0.001;
+    
     GLOBAL_focus_weight= 1 ;
     
     double x[7] = {0.0, 0.0, 0.0, GLOBAL_Tc[0], GLOBAL_Tc[1], GLOBAL_Tc[2],GLOBAL_Kmatrix[0]};  
@@ -85,6 +87,7 @@ static void Sing_camera_refine(int num_points, v3_t *points, v2_t *projs, double
     memcpy(R,Rnew, 9*sizeof(double));
     memcpy(T,Tnew,3*sizeof(double));
     memcpy(Kmatrix,K,9*sizeof(double));
+    
     
 #endif
     
@@ -118,11 +121,11 @@ static void Sing_camera_refine(int num_points, v3_t *points, v2_t *projs, double
     lmdif_driver2( CameraReprojectionError, 2 * num_points, 3 , x, 1.0e-12);     
     
     double Rnew[9];
-    double Tnew[3];
+    //double Tnew[3];
     double Rvec[3];  
     
     memcpy( Rvec, x ,  3 * sizeof(double));  
-    memcpy(Tnew,x+3,3*sizeof(double));
+    //memcpy(Tnew,x+3,3*sizeof(double));
     
     Sing_rot_update(GLOBAL_Rot, Rvec , Rnew);
     
@@ -170,6 +173,7 @@ static void CameraReprojectionError(const int *m, const int *n,
 
 #ifdef EstimateFocu
     
+    
     //int i;
     //double error3 = 0.0;
     
@@ -200,7 +204,6 @@ static void CameraReprojectionError(const int *m, const int *n,
         fvec[2 * GLOBAL_num_pts] =  GLOBAL_focus_weight * focus_difference;
         
     }
-    //    printf(" %f \n",error3 );
 #endif    
 }
 static void CameraProjectPoint(double *aj, double *bi, 

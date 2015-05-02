@@ -864,13 +864,13 @@ void EpipolarGeometry::PointRefinement(v3_t* m_3Dpts,vector<v2_t> & left_pts,vec
     for (int i=0;i<num_ofrefined_pts;i++)
            tempvector[i]= false;
     /// check Cheirality
-    for (int i=0;i<num_ofrefined_pts;i++)
-    {
-       if(CheckCheirality(m_3Dpts[i]))
-       { 
-           tempvector[i]= true;
-       }
-    }
+    //    for (int i=0;i<num_ofrefined_pts;i++)
+    //    {
+    //       if(CheckCheirality(m_3Dpts[i]))
+    //       { 
+    //           tempvector[i]= true;
+    //       }
+    //    }
     
     _3DdepthRefine ( m_3Dpts, tempvector, num_ofrefined_pts);
     
@@ -914,8 +914,8 @@ void EpipolarGeometry::PointRefinement(v3_t* m_3Dpts,vector<v2_t> & left_pts,vec
 {
     
     int size_= num_ofrefined_pts;
-    double max_number = -1.0;    // remove outliers from candidated points 
-    double min_number = -50.0;
+    double max_number =  999;    // remove outliers from candidated points 
+    double min_number = -999;
     double range;
     int i;
     int Nbins = 50;
@@ -926,36 +926,56 @@ void EpipolarGeometry::PointRefinement(v3_t* m_3Dpts,vector<v2_t> & left_pts,vec
     double  Range_low;
     double  Range_upper;
     
+    double maxDepth;
+    double minDepth;
+    
+    // Remove some incredible depth first //
+    
     for (int i=0;i< size_;i++)
     {
              if ( m_3Dpts[i].p[2]< min_number)
-                   tempvector[i]= true;                 
+                   tempvector[i]= true;
+             if ( m_3Dpts[i].p[2]> max_number)
+                   tempvector[i]= true;
     }
     
-    range = (max_number - min_number) / Nbins;
+    // find max and min for voting 
+    for (int i=0;i< size_;i++)
+    {
+         if( !tempvector[i] ) 
+         {
+           if( m_3Dpts[i].p[2]> min_number)
+           {  
+               maxDepth = m_3Dpts[i].p[2];
+               min_number= maxDepth;
+           }
+            if( m_3Dpts[i].p[2]< max_number)
+             {
+                 minDepth= m_3Dpts[i].p[2] ;
+                 max_number= minDepth;
+             }
+         }
+        
+    }
+    
+    range = fabs((maxDepth - minDepth) / Nbins);
     for(i=0; i<size_;i++)
     {
        if (tempvector[i] == false)
        {
-         for(int index=0; index< Nbins; index++)
-           {
-        
-            Range_low = min_number   +   (index)*range;
-            Range_upper = min_number +   (index+1)*range;
+
             float x = (float) m_3Dpts[i].p[2];
-            
-               if ( Range_low < x && x <= Range_upper)              
-                {
-                Bin[index] += 1; 
+            int idx = round(((maxDepth-x)/(maxDepth-minDepth))*Nbins);
+            Bin[idx] += 1; 
                 
-                }
-         }
+
        }
     }
     int mx_bin  = 0;
     for (int i=0;i<Nbins;i++)
     {
-      if(Bin[i]> mx_bin)
+     //   cout<<"each bin " <<Bin[i]<<endl; 
+     if(Bin[i]> mx_bin)
        {
         mx_bin = Bin[i];
         mx_index = i;
@@ -963,7 +983,8 @@ void EpipolarGeometry::PointRefinement(v3_t* m_3Dpts,vector<v2_t> & left_pts,vec
        }
     }
 
-    float depth = (min_number+(mx_index)*range);
+    float depth = (minDepth+(mx_index)*range);
+    
     float varince= Variance (m_3Dpts, depth, size_);
     float *densitytemp  = new float [size_]; 
     cout<< depth <<"variance "<<varince <<endl;
@@ -1049,5 +1070,74 @@ IplImage* EpipolarGeometry:: plot_two_imagesf(IplImage *IGray, IplImage *IGray1)
         
     }  
     return(Imagedisplay);
-
 }
+
+//void EpipolarGeometry::ReprojionErrorRefin (v3_t* m_3Dpts, bool* tempvector, int num_ofrefined_pts)
+//{
+//    
+//    int size_= num_ofrefined_pts;
+//    double max_number = -1.0;    // remove outliers from candidated points 
+//    double min_number = -50.0;
+//    double range;
+//    int i;
+//    int Nbins = 50;
+//    
+//    int Bin[50]={};
+//    
+//    int mx_index= 0;
+//    double  Range_low;
+//    double  Range_upper;
+//    
+//    for (int i=0;i< size_;i++)
+//    {
+//        if ( m_3Dpts[i].p[2]< min_number)
+//            tempvector[i]= true;                 
+//    }
+//    
+//    range = (max_number - min_number) / Nbins;
+//    for(i=0; i<size_;i++)
+//    {
+//        if (tempvector[i] == false)
+//        {
+//            for(int index=0; index< Nbins; index++)
+//            {
+//                
+//                Range_low = min_number   +   (index)*range;
+//                Range_upper = min_number +   (index+1)*range;
+//                float x = (float) m_3Dpts[i].p[2];
+//                
+//                if ( Range_low < x && x <= Range_upper)              
+//                {
+//                    Bin[index] += 1; 
+//                    
+//                }
+//            }
+//        }
+//    }
+//    int mx_bin  = 0;
+//    for (int i=0;i<Nbins;i++)
+//    {
+//        if(Bin[i]> mx_bin)
+//        {
+//            mx_bin = Bin[i];
+//            mx_index = i;
+//            
+//        }
+//    }
+//    
+//    float depth = (min_number+(mx_index)*range);
+//    float varince= Variance (m_3Dpts, depth, size_);
+//    float *densitytemp  = new float [size_]; 
+//    cout<< depth <<"variance "<<varince <<endl;
+//    for (int i=0;i< size_;i++)
+//    {
+//        float x = (float) m_3Dpts[i].p[2];
+//        float a=-fabs(x-depth)*(1./(1.06*(sqrt(varince))*2.1));
+//        //float density = exp(a);
+//        densitytemp[i]=exp(a);
+//        if (densitytemp[i]<0.3)
+//            tempvector[i] = true;
+//    }
+//    delete [] densitytemp;
+//}
+

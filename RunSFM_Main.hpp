@@ -25,8 +25,8 @@ double RunSFM_Nviews_Main(int num_pts /*number of 3D pts */,
                           vector<RotMat>&  mtriRotmatrix,     /*camera rotation matrix*/
                           vector<TMat>&    mtriTcmatrix,      /*camera translation matrix*/
                           vector<Kmat>&    mtriKmatrix,       /*camera instrinstic matrix*/ 
-                          vector<vector<v2_t> > mv2_location /*2D points location*/ , 
-                          vector<vector<int> >  mv2_frame    /*frame number*/, 
+                          vector<vector<v2_t> >& mv2_location /*2D points location*/ , 
+                          vector<vector<int> >&  mv2_frame    /*frame number*/, 
                           vector<v3_t>& v3Pts                /*triangulation output*/);
 
 double RunSFM_Nviews(int num_pts, int num_cameras, int start_camera, int Numofframe, 
@@ -47,5 +47,36 @@ void InitializedCameraParameters (
                              vector<Kmat>    mtriKmatrix,
                              camera_params_t* CameraPara
                                   );
+
+class CameraInfo {
+    
+public:
+    bool m_constrained[7];
+    double m_constraints[7];
+    double m_constraint_weights[7];
+    CameraInfo() 
+    {
+        m_constrained[0] = m_constrained[1] = m_constrained[2] = false; 
+        m_constrained[3] = m_constrained[4] = m_constrained[5] = false; 
+        m_constrained[6] = false;
+        m_constraints[0] = m_constraints[1] = m_constraints[2] = 0.0;
+        m_constraints[3] = m_constraints[4] = m_constraints[5] = 0.0;
+        m_constraints[6] = 0.0;
+        m_constraint_weights[0] = 
+        m_constraint_weights[1] = 
+        m_constraint_weights[2] = 0.0;
+        m_constraint_weights[3] = 
+        m_constraint_weights[4] = 
+        m_constraint_weights[5] = 0.0;
+        m_constraint_weights[6] = 0.0;      
+        
+        //       m_k[0] = m_k[1] = 0.0;
+        //#ifndef __BUNDLER__
+        //        for (int i = 0; i < NUM_LINK_DIRECTIONS; i++) 
+        //            m_links[i] = -1;
+        //#endif
+    }
+};
+
 
 #endif 

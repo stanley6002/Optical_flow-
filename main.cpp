@@ -161,11 +161,11 @@ int main (int argc, const char * argv[])
                     // for plot 
                     int size_match= (int) match_query.size();
                     
-                    int numTrialFmatrix = 30;
-                    int numTrialRelativePose = 20;
+                    int numTrialFmatrix = 20;
+                    int numTrialRelativePose = 35;
                     int Focuslength= 300;
                     int Ransac_threshold= 2.0;
-                    float MaxAngle = 0.055;
+                    float MaxAngle = 0.045;
                    
                     EpipolarGeometry EpipolarGeometry(match_query, match_train, size_match, numTrialFmatrix, numTrialRelativePose, Focuslength, Ransac_threshold);  
                     EpipolarGeometry.FindFundamentalMatrix(); 
@@ -241,10 +241,9 @@ int main (int argc, const char * argv[])
                             vector<bool> tempvector;
                             
                             CameraPose.TriangulationN_Frames(FeaturePts. mv2_location , FeaturePts. mv2_frame , Tempv3Dpts , tempvector);
-                                                       
+                                                 
                             FeaturePts.PointRefinement(Tempv3Dpts, tempvector);
                             
-                                                      
                             double error = RunSFM_Nviews_Main(FeaturePts.m_3Dpts.size() /*number of 3D pts */, 
                                                       3, 
                                                       0,                   
@@ -254,8 +253,8 @@ int main (int argc, const char * argv[])
                                                       FeaturePts. mv2_location /*2D points location*/ , 
                                                       FeaturePts. mv2_frame    /*frame number*/, 
                                                       FeaturePts.m_3Dpts                /*triangulation output*/);
-
-                            
+                           
+                                                        
                             cout<< FeaturePts.mv2_frame.size()<<endl;
                                                         
                             //int idx= CameraPose.mtriTcmatrix.size();
@@ -267,9 +266,15 @@ int main (int argc, const char * argv[])
                             vector<v3_t> V3Dpts;   
                             
                             loop++;
-                            if (loop > 10 )
+                            if (loop > 33)
                             {
-                              DumpPointsToPly("/Users/chih-hsiangchang/Desktop/Archive/result.ply", FeaturePts. _3DLocation
+                                for(int i=0;i< CameraPose.mTcMatrix.size();i++)
+                                {
+                                    double T[3];
+                                    memcpy(T, CameraPose.mTcMatrix[i].n,3*sizeof(double));
+                                    matrix_print(1,3,T);
+                                }
+                                DumpPointsToPly("/Users/chih-hsiangchang/Desktop/Archive/result.ply", FeaturePts. _3DLocation
                                             , FeaturePts. _3DLocation.size());
                                 break;
                              }
@@ -278,11 +283,11 @@ int main (int argc, const char * argv[])
                             
                             FeaturePts. CleanFeatureTrack();
                             
-                            FeaturePts. Loadv2Pts( left_pts, right_pts);  
+                            FeaturePts. Loadv2Pts(left_pts, right_pts);  
                                 
                             FeaturePts. Loadv3Pts(V3Dpts); 
                         
-                            FeaturePts.LoadFeatureList(FrameNum);
+                            FeaturePts. LoadFeatureList(FrameNum);
                             
                             double T[3];
                             double T1[3];

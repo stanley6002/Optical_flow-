@@ -83,7 +83,8 @@ typedef struct {
     double *weights;
 } camera_constraints_t;
 
-typedef struct {
+typedef struct
+{
     char constrained;
     double constraints[3];
     double weight;

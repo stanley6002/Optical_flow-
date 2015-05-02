@@ -90,6 +90,10 @@ void OpenGLPlot:: Setview(const vector<v3_t> V3Dpts)
             Matrix4X4 matrixModelView2; 
             glLoadIdentity();
             matrixModelView2.identity();
+            if( Min_VZ>  0)
+            {
+                Min_VZ= -Min_VZ;
+            }
             matrixModelView2.translate(-0.0 ,0.0, Min_VZ-20);
             cout<< "center "<<center_x<<" "<<center_y<<endl;
             glLoadMatrixf(matrixModelView2.getTranspose());
@@ -113,7 +117,7 @@ void OpenGLPlot::SetupFrustrum()
 {
     glMatrixMode (GL_PROJECTION);
     glLoadIdentity ();
-    glFrustum (-8.0, 8.0, -5.5, 5.5, 3.0 , 45.5);    
+    glFrustum (-8.0, 8.0, -5.5, 5.5, 1.0 , 45.5);    
     glMatrixMode (GL_MODELVIEW);
     glPushMatrix();
 }
@@ -197,7 +201,7 @@ void OpenGLPlot::PlotCamera(double *t_relative)
     //glLoadMatrixf(matrixModelView2.getTranspose());
     glPushMatrix();
     //glScaled(0.6,0.6,0.6);
-    glTranslated(-center_x, +center_y  , -15);
+    glTranslated(-center_x, +center_y  , center_z-10);
     glBegin( GL_POINTS);
     for (int i=0;i<size_;i++)
     {

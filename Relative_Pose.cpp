@@ -164,8 +164,8 @@ void CameraPose::Egomotion(double* R, double*T, vector<v3_t> v3ProjectPts, vecto
     double updated_rotation[9];
     double updated_t[3];
     
-    PopRotcMatrix((int) mRcMatrix.size()-1, Rpre);   // load previous 
-    PopTcMatrix( (int) mTcMatrix.size()-1,Tpre);
+    PopTriRotcMatrix((int) mtriRotmatrix.size()-1, Rpre);   // load previous 
+    PopTriTcMatrix( (int)  mtriTcmatrix.size()-1,Tpre);
     
     
     cout<<"Previous"<<endl;
@@ -181,25 +181,21 @@ void CameraPose::Egomotion(double* R, double*T, vector<v3_t> v3ProjectPts, vecto
     updated_t[1]=fin_t[1]+T_relative[1];
     updated_t[2]=fin_t[2]+T_relative[2];
     
-    //updated_t[0]=fin_t[0];  // add to -(Rij)'*tij
-    //updated_t[1]=fin_t[1];
-    //updated_t[2]=fin_t[2];
-    
     cout<<"egomotion"<<endl;
     cout<<updated_t[0]<<" "<<updated_t[1]<<" "<<updated_t[2]<<endl;
     
     double* Kmatrix = new double [9];
     
-    PopKMattix((int) KMatrix.size()-1, Kmatrix) ;
+    PopTriKMattix((int) mtriKmatrix.size()-1, Kmatrix) ;
     //matrix_print (3,3, Kmatrix);
     
     
-    double Tc_updated[3];
+    
     //double error1 =  CameraReprojectError( NumofReprojectPts, updated_rotation, updated_t , mv3ProjectPts , mv2ReprojectPts ,  Kmatrix);
     //cout<<"reprojection error no alightment  " <<error1 / NumofReprojectPts<<endl;    
 
     // this part alight the 3D point with delat vector//   
-    TwoDalighment(NumofReprojectPts, updated_rotation , updated_t , mv3ProjectPts, mv2ReprojectPts, Tc_updated);
+    TwoDalighment(NumofReprojectPts, updated_rotation , updated_t , mv3ProjectPts, mv2ReprojectPts);
     
     //v3_t* mv3ProjectPts= new v3_t [NumofReproject];
     //v2_t* mv2ReprojectPts= new v2_t [NumofReproject];
@@ -218,22 +214,24 @@ void CameraPose::Egomotion(double* R, double*T, vector<v3_t> v3ProjectPts, vecto
     //}
     
     //double UpdateR[9];
-    CameraRotRefine( NumofReprojectPts  , mv3ProjectPts, mv2ReprojectPts , updated_rotation , Tc_updated , Kmatrix);
+    CameraRotRefine( NumofReprojectPts  , mv3ProjectPts, mv2ReprojectPts , updated_rotation , updated_t , Kmatrix);
   
-    double error3 =  CameraReprojectError(NumofReprojectPts, updated_rotation , Tc_updated , mv3ProjectPts ,mv2ReprojectPts ,  Kmatrix);
+    //double error3 =  CameraReprojectError(NumofReprojectPts, updated_rotation , Tc_updated , mv3ProjectPts ,mv2ReprojectPts ,  Kmatrix);
     
-    cout<<"NumofReproject" << NumofReprojectPts <<"reprojection error " <<error3/ NumofReprojectPts <<endl;
+    //cout<<"NumofReproject" << NumofReprojectPts <<"reprojection error " <<error3/ NumofReprojectPts <<endl;
     
-    matrix_print(3,1,Tc_updated);
+    cout<<"center_nonlinear"<<endl;
+    matrix_print(3,1,updated_t);
+    matrix_print(3,3,Kmatrix);
     
     // update new camera pose data
     
     LoadKMatrix(Kmatrix,(int) KMatrix.size()-1);
-    LoadTcMatrix(Tc_updated);
+    LoadTcMatrix(updated_t);
     LoadRotcMatrix(updated_rotation);
     
     LoadTriKmatrix(Kmatrix,(int) mtriKmatrix.size()-1);
-    LoadTriTcmatrix(Tc_updated);
+    LoadTriTcmatrix(updated_t);
     LoadTriRotmatrix(updated_rotation);
     
     delete [] mv3ProjectPts;
@@ -244,7 +242,7 @@ void CameraPose::Egomotion(double* R, double*T, vector<v3_t> v3ProjectPts, vecto
     
 }
 void  CameraPose:: TwoDalighment(int NumofReproject , double*Rot, double*trans,  v3_t* P__3DSolvedforparameters, 
-                                 v2_t* P__2DSolvedforparameters, double* Tcmatrix)
+                                 v2_t* P__2DSolvedforparameters)
 {
     
 # define _2d_aligh 2
@@ -284,7 +282,7 @@ void  CameraPose:: TwoDalighment(int NumofReproject , double*Rot, double*trans, 
         _3Dpt[i].p[0]=q[0]; _3Dpt[i].p[1]=q[1]; _3Dpt[i].p[2]=q[2];
         
         _2Dpt[i].p[0]= P__2DSolvedforparameters[i].p[0]/Kmatrix[0]; 
-        _2Dpt[i].p[1]= P__2DSolvedforparameters[i].p[1]/Kmatrix[4]; 
+        _2Dpt[i].p[1]= P__2DSolvedforparameters[i].p[1]/Kmatrix[0]; 
         
         //cout<<  _3Dpt[i].p[0]<<" "<< _3Dpt[i].p[1]<<" "<< _3Dpt[i].p[2]<<endl;
         //cout<<  _2Dpt[i].p[0]<<" "<<_2Dpt[i].p[1]<<endl;
@@ -308,7 +306,7 @@ void  CameraPose:: TwoDalighment(int NumofReproject , double*Rot, double*trans, 
     //trans[1]= TR[1]+ R_t_T[1];
     //trans[2]= TR[2]+ R_t_T[2];
     
-    memcpy(Tcmatrix, trans, 3*sizeof(double));
+    //memcpy(Tcmatrix, trans, 3*sizeof(double));
     //cout<<"alightment result"<<endl;
     
     delete [] _3Dpt;
@@ -545,9 +543,11 @@ void CameraPose :: TriangulationN_Frames(vector<vector<v2_t> > mv2_location /*2D
     //    tempvector[i]= false;
 
     RefineN_FramePoints( _3Dpts , NumPts, tempvector);
+
     CameraReprojctionErrorRefinement( mv2_location /*2D points location*/ ,  mv2_frame /*frame number*/, NumPts, _3Dpts, tempvector );
-   
+    
     v3Pts.swap(_3Dpts);   // update 3D points 
+    cout<<"after triangulation refine "<< v3Pts.size()<<endl;
     boolvector.swap(tempvector) ;
 }
 
@@ -568,7 +568,8 @@ double CameraPose:: CameraReprojctionErrorRefinement(vector<vector<v2_t> > mv2_l
         {
          v3_t v3pt = v3Pts[i];
          int index = (int) mv2_frame[i].size();
-       for ( int j=0;j<index;j++)
+       
+        for ( int j=0;j<index;j++)
           {
             
             v2_t ProjectPts =  mv2_location[i][j];
@@ -589,9 +590,9 @@ double CameraPose:: CameraReprojctionErrorRefinement(vector<vector<v2_t> > mv2_l
         }
     }
         
-    mean_err= (sumerr/num);
+    mean_err= (sumerr/Numpts);
    
-    double sum;
+    double sum=0;
     for (int i=0;i<size_;i++)
     {         
       if (tempvector[i]==false)
@@ -600,22 +601,26 @@ double CameraPose:: CameraReprojctionErrorRefinement(vector<vector<v2_t> > mv2_l
           sum=sum+temp;
         }
     }
-    float variance = sum * (1. / num);
+    float variance = sum * (1. / size_);
+    cout<<"means and variance "<< mean_err <<" "<<variance<<endl; 
+    
     for (int i=0;i<size_;i++)
     {
       if(tempvector[i]== false)
       {
           double x = error_vec[i];
-          float a=-fabs(x-mean_err)*(1./(1.06*(sqrt(variance))*2.1));
+          float a= -fabs(x-mean_err)*(1./(1.06*(sqrt(variance))*2.1));
           //float density = exp(a);
           float density =exp(a);
           if( x> mean_err)
           {
-             if (density< MiniDensity)
+            
+            if (density< 0.6)
               {
                tempvector[i] = true;
-               //cout<<"remove "<<" "<< x<<endl
+               //cout<<" "<<" "<< x<<endl
               }
+            
           }
       }
 }
@@ -627,13 +632,13 @@ double CameraPose:: CameraReprojctionErrorRefinement(vector<vector<v2_t> > mv2_l
 void RefineN_FramePoints(vector<v3_t> _3DPts, int NumPts, vector<bool>& tempvector)
 {
     /// check Cheirality
-    for (int i=0;i<NumPts;i++)
-    {
-        if(CheckCheirality(_3DPts[i]))
-        { 
-            tempvector[i]= true;
-        }
-    }
+    //for (int i=0;i<NumPts;i++)
+    //{
+    //    if(CheckCheirality(_3DPts[i]))
+    //    { 
+    //        tempvector[i]= true;
+    //    }
+    //}
     
     // check depth //
     _3DdepthRefine(_3DPts, tempvector, NumPts);
@@ -645,72 +650,88 @@ void _3DdepthRefine (vector<v3_t> m_3Dpts, vector<bool>& tempvector, int num_ofr
 {
     
     int size_= num_ofrefined_pts;
-    double max_number = -1.0;    // remove outliers from candidated points 
-    double min_number = -50.0;
+    double max_number =  999;    // remove outliers from candidated points 
+    double min_number = -999;
     double range;
     int i;
-    int Nbins = 50;
+    int Nbins = 49;
     
     int Bin[50]={};
     
     int mx_index= 0;
-    double  Range_low;
-    double  Range_upper;
+
+    double maxDepth;
+    double minDepth;
+    
+    // Remove some incredible depth first //
     
     for (int i=0;i< size_;i++)
     {
         if ( m_3Dpts[i].p[2]< min_number)
-            tempvector[i]= true;                 
+            tempvector[i]= true;
+        if ( m_3Dpts[i].p[2]> max_number)
+            tempvector[i]= true;
     }
     
-    range = (max_number - min_number) / Nbins;
+    // find max and min for voting 
+    for (int i=0;i< size_;i++)
+    {
+        if( !tempvector[i] ) 
+        {
+            if( m_3Dpts[i].p[2]> min_number)
+            {  
+                maxDepth = m_3Dpts[i].p[2];
+                min_number= maxDepth;
+            }
+            if( m_3Dpts[i].p[2]< max_number)
+            {
+                minDepth= m_3Dpts[i].p[2] ;
+                max_number= minDepth;
+            }
+        }
+        
+    }
+    
+    range = fabs((maxDepth - minDepth) / (Nbins+1));
     for(i=0; i<size_;i++)
     {
         if (tempvector[i] == false)
         {
-            for(int index=0; index< Nbins; index++)
-            {
-                
-                Range_low = min_number   +   (index)*range;
-                Range_upper = min_number +   (index+1)*range;
-                float x = (float) m_3Dpts[i].p[2];
-                
-                if ( Range_low < x && x <= Range_upper)              
-                {
-                    Bin[index] += 1; 
-                    
-                }
-            }
+            float x = (float) m_3Dpts[i].p[2];
+            int idx = floor((x-minDepth)/range);
+            Bin[idx] += 1; 
         }
     }
+    
     int mx_bin  = 0;
-    for (int i=0;i<Nbins;i++)
+    for (int i=0;i< Nbins;i++)
     {
+        //   cout<<"each bin " <<Bin[i]<<endl; 
         if(Bin[i]> mx_bin)
         {
             mx_bin = Bin[i];
             mx_index = i;
-            
         }
     }
     
-    float depth = (min_number+(mx_index)*range);
+    float depth = (minDepth+(mx_index)*range);
+    //float depth = minDepth+((maxDepth - minDepth)*(mx_index/Nbins));
     float varince= Variance (m_3Dpts, depth, size_);
     float *densitytemp  = new float [size_]; 
     cout<< depth <<"variance "<<varince <<endl;
-    
     for (int i=0;i< size_;i++)
     {
         float x = (float) m_3Dpts[i].p[2];
         float a=-fabs(x-depth)*(1./(1.06*(sqrt(varince))*2.1));
         //float density = exp(a);
         densitytemp[i]=exp(a);
-        if (densitytemp[i]< MiniDensity )
+        if (densitytemp[i]< 0.65)
             tempvector[i] = true;
     }
-    
-    
     delete [] densitytemp;
+
+    
+
 }
 
 float Variance (vector<v3_t> _3Dpts, const float depth , const int size_)
@@ -720,12 +741,15 @@ float Variance (vector<v3_t> _3Dpts, const float depth , const int size_)
     int num=0;
     for (int i=0;i<size_;i++)
     { 
-        if(_3Dpts[i].p[2]< 0 && _3Dpts[i].p[2]> -30 )
-        {
+        //if(_3Dpts[i].p[2]< 0 && _3Dpts[i].p[2]> -30 )
+        //{
+          if (fabs(_3Dpts[i].p[2]-depth)<15)
+          {
             tempz[i]= (float)(_3Dpts[i].p[2]-depth)*(_3Dpts[i].p[2]-depth);
             sum=sum+tempz[i];
             num++;
-        }
+          }
+        //}
     }
     
     delete [] tempz;

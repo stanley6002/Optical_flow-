@@ -26,7 +26,7 @@ extern "C" {
 
 #include "vector.h"
 
-//#define NUM_CAMERA_PARAMS 9
+#define NUM_CAMERA_PARAMS 9
 //#define POLY_INVERSE_DEGREE 6
 
 typedef struct {
@@ -35,8 +35,14 @@ typedef struct {
     double f;        /* Focal length */
     double K_known[9];  /* Intrinsics (if known) */
     double f_scale; /* Scale on focal length, distortion params */
+    char constrained[NUM_CAMERA_PARAMS];
+    double constraints[NUM_CAMERA_PARAMS];  /* Constraints (if used) */
+    double weights[NUM_CAMERA_PARAMS];      /* Weights on the constraints */
 } camera_params_t;
 
+
+    
+    
 /* Compute an updated rotation matrix given the initial rotation (R)
  * and the correction (w) */
 void rot_update(double *R, double *w, double *Rnew);

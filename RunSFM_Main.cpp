@@ -41,8 +41,8 @@ double RunSFM_Nviews_Main(int num_pts /*number of 3D pts */,
                           vector<RotMat>&  mtriRotmatrix,     /*camera rotation matrix*/
                           vector<TMat>&    mtriTcmatrix,      /*camera translation matrix*/
                           vector<Kmat>&    mtriKmatrix,       /*camera instrinstic matrix*/ 
-                          vector<vector<v2_t> > mv2_location /*2D points location*/ , 
-                          vector<vector<int> >  mv2_frame    /*frame number*/, 
+                          vector<vector<v2_t> >& mv2_location /*2D points location*/ , 
+                          vector<vector<int> >&  mv2_frame    /*frame number*/, 
                           vector<v3_t>& v3Pts                /*triangulation output*/)
 {
     double error ;
@@ -88,14 +88,18 @@ double RunSFM_Nviews_Main(int num_pts /*number of 3D pts */,
     
     for(int i=0;i< num_cameras;i++)
     {
-        InitializedCameraParameters ( i,         
+          InitializedCameraParameters( i,         
                                       mtriRotmatrix,     /*camera rotation matrix*/
                                       mtriTcmatrix,      /*camera translation matrix*/
                                       mtriKmatrix,
                                       CameraPara);
      
     }
-   
+    for(int i=0;i<num_cameras;i++)
+    {
+        SetCameraConstraints(CameraPara[i],0);
+        SetFocalConstraint(CameraPara[i]);
+    }
     
     int Numofframe=0;
     for (int i=0;i<num_pts;i++)
@@ -131,15 +135,15 @@ double RunSFM_Nviews_Main(int num_pts /*number of 3D pts */,
         nz_count++;
     }
 
-    bool EstimateFocal=1;
-    bool UseFocalconstraints=0;  
+    bool EstimateFocal= 1 ;
+    bool UseFocalconstraints= 0;  
     bool fix_points= 0 ; 
     bool UsePointConstraint= 0;
     bool remove_outliers=1;
-    int  NumIteration=7;
+    int  NumIteration= 7 ;
     
   
-
+    cout<<"points for SFM"<< num_pts<<endl;
     
     run_sfm(num_pts, num_cameras, start_camera , vmask , projections, 
             /*focal length estimatation ? 0 : 1*/  EstimateFocal   ,
@@ -159,50 +163,139 @@ double RunSFM_Nviews_Main(int num_pts /*number of 3D pts */,
                         0.0, 0.0, 1.0 };
         
         memcpy(mtriKmatrix[i].n,K, 9*sizeof(double));
-        
         memcpy(mtriRotmatrix[i].n,CameraPara[i].R, 9*sizeof(double)); 
         memcpy(mtriTcmatrix[i].n,CameraPara[i].t, 3*sizeof(double) ); 
+        
     
     } 
+    
+    for (i = 0; i < num_cameras; i++) 
+    {
+        
+        double K[9] =  { CameraPara[i].f, 0.0, 0.0, 
+            0.0, CameraPara[i].f, 0.0,
+            0.0, 0.0, 1.0 };
+        
+        memcpy(mtriKmatrix[i].n,K, 9*sizeof(double));
+        memcpy(mtriRotmatrix[i].n,CameraPara[i].R, 9*sizeof(double)); 
+        memcpy(mtriTcmatrix[i].n,CameraPara[i].t, 3*sizeof(double) ); 
+        
+        
+    } 
+
+    
     if (! fix_points)
     {
         for(i=0;i< num_pts;i++)
             v3Pts[i]= sfm3Dpts[i];    
     }
+    
     if(remove_outliers)
     {
         for (int i = 0; i < num_cameras; i++) 
         {
-            
             double t[3] =  {mtriTcmatrix[i].n[0],mtriTcmatrix[i].n[1],mtriTcmatrix[i].n[2]};
             cout<< "camera_center"<<endl; 
             matrix_print(3,1, t); 
             
         } 
-        //            error=0;
-        //            for(int i=0;i< (int) v3Pts.size();i++)
-        //            {
-        //                double temperr=0;
-        //                for(int j=0;j <  mv2_frame[i].size();j++)
-        //                {
-        //                    int c = mv2_frame[i][j];
-        //                    v3_t _3dpts = v3Pts[i]; 
-        //                    v2_t reprojection;
-        //                    reprojection.p[0] = mv2_location[i][j].p[0];
-        //                    reprojection.p[1] = mv2_location[i][j].p[1];
-        //                    double R[9]; double T[3];  double K[9];
-        //                    memcpy(R,mtriRotmatrix[c].n,sizeof(double)*9);
-        //                    memcpy(T,mtriTcmatrix[c].n,sizeof(double)*3);
-        //                    memcpy(K,mtriKmatrix[c].n,sizeof(double)*9);
-        //                    //cout<<"frame number"<< c<<" ";
-        //                    double err = ReprojectError(R,T, _3dpts,reprojection,K);
-        //                    temperr += err;
-        //                            
-        //                }
-        //                cout<<temperr/ (int) mv2_frame[i].size()  <<" "<<endl;
-        //                error += temperr;
-        //            }
-        //             cout<<"error after sfm "<< error/ (int) v3Pts.size()<<endl;
+        
+        double* error_vec= new double [num_pts];
+        memset(error_vec,0,num_pts*sizeof(double));
+        bool* tempvector = new bool [num_pts];
+        memset(tempvector,0,num_pts*sizeof(bool));
+        
+            error=0;
+            for(int i=0;i< (int) num_pts;i++)
+            {
+                double temperr=0;
+                for(int j=0;j <  mv2_frame[i].size();j++)
+               {
+                    int c = mv2_frame[i][j];
+                    v3_t _3dpts = v3Pts[i]; 
+                    v2_t reprojection;
+                    reprojection.p[0] = mv2_location[i][j].p[0];
+                    reprojection.p[1] = mv2_location[i][j].p[1];
+                    double R[9]; double T[3];  double K[9];
+                    memcpy(R,mtriRotmatrix[c].n,sizeof(double)*9);
+                    memcpy(T,mtriTcmatrix[c].n,sizeof(double)*3);
+                    memcpy(K,mtriKmatrix[c].n,sizeof(double)*9);
+                    //cout<<"frame number"<< c<<" ";
+                    double err = ReprojectError(R,T, _3dpts,reprojection,K);
+                    temperr += err;
+                           
+                }
+                error += (temperr)*( 1./(int)mv2_frame[i].size()); 
+                error_vec[i]=  (temperr)*( 1./(int)mv2_frame[i].size());
+            }
+             double mean_err= (error/num_pts);
+        
+             cout<<"error after sfm "<< mean_err<<"num pts "<<num_pts<<endl;
+             double summmation;
+        
+           for (int i=0;i<num_pts;i++)
+            {         
+    
+             float temp = (error_vec[i]-mean_err)*(error_vec[i]-mean_err);
+             summmation=summmation+temp;
+           }
+
+            float variance = summmation * (1. / num_pts);
+       
+           for (int i=0;i<num_pts;i++)
+            {
+
+                double x = error_vec[i];
+                float a=-fabs(x-mean_err)*(1./(1.06*(sqrt(variance))*2.1));
+                //float density = exp(a);
+                float density =exp(a);
+                
+                  if( x > mean_err)
+                   {
+                    if (density < 0.15)
+                    {
+                        tempvector[i] = true;
+                        cout<<"remove by sfm result"<<" "<< x<<endl;
+                    }
+                }
+            }
+        
+        vector<v3_t> v3D;
+        vector<vector<int> > v2_frame;
+        vector<vector<v2_t> > v2_location;
+        
+        int shift_index=0;
+        for(int i=0;i< num_pts; i++)
+        {
+            if(! tempvector[i])
+            {
+                v3D.push_back(v3Pts[i]);
+                
+                v2_frame.push_back(vector<int>());
+                v2_location.push_back(vector<v2_t>());
+             
+                for (int j=0; j< mv2_frame[i].size();j++)
+                {
+                    int size = (int) v2_frame.size()-1;
+                    v2_frame[size].push_back(mv2_frame[i][j]);    
+                    v2_location[size].push_back(mv2_location[i][j]);
+                    
+                }           
+            }
+        }
+       
+        v3Pts.clear();
+        v3Pts.swap(v3D);
+                
+        mv2_frame.clear();
+        mv2_location.clear();
+        
+        mv2_frame.swap(v2_frame);
+        mv2_location.swap(v2_location);
+        
+        delete [] tempvector;
+        delete [] error_vec;
+        
     }
     
 
@@ -231,3 +324,60 @@ void InitializedCameraParameters (
          memcpy(CameraPara[i].K_known , mtriKmatrix[i].n, 9*sizeof(double)); /*Initialized focal length and Instrinstic matrix*/
          CameraPara[i].f=mtriKmatrix[i].n[0];
 }
+void SetCameraConstraints(camera_params_t params, bool _estimate_distortion)
+{   
+    CameraInfo cam;
+    
+    params.constrained[0] = cam.m_constrained[0];
+    params.constrained[1] = cam.m_constrained[1];
+    params.constrained[2] = cam.m_constrained[2];
+    params.constrained[3] = cam.m_constrained[3];
+    params.constrained[4] = cam.m_constrained[4];
+    params.constrained[5] = cam.m_constrained[5];
+    params.constrained[6] = cam.m_constrained[6];
+    
+    if (_estimate_distortion) {
+        params.constrained[7] = true;
+        params.constrained[8] = true;
+    } else {
+        params.constrained[7] = false;
+        params.constrained[8] = false;
+    }
+    
+    params.constraints[0] = cam.m_constraints[0];
+    params.constraints[1] = cam.m_constraints[1];
+    params.constraints[2] = cam.m_constraints[2];
+    params.constraints[3] = cam.m_constraints[3];
+    params.constraints[4] = cam.m_constraints[4];
+    params.constraints[5] = cam.m_constraints[5];
+    params.constraints[6] = cam.m_constraints[6];
+    params.constraints[7] = 0.0;
+    params.constraints[8] = 0.0;
+    
+    params.weights[0] = cam.m_constraint_weights[0];
+    params.weights[1] = cam.m_constraint_weights[1];
+    params.weights[2] = cam.m_constraint_weights[2];
+    params.weights[3] = cam.m_constraint_weights[3];
+    params.weights[4] = cam.m_constraint_weights[4];
+    params.weights[5] = cam.m_constraint_weights[5];
+    params.weights[6] = cam.m_constraint_weights[6];
+    
+    if (_estimate_distortion) 
+    {
+        params.weights[7] = m_distortion_weight;
+        params.weights[8] = m_distortion_weight;
+    } 
+    else 
+    {
+        params.weights[7] = 200.0;
+        params.weights[8] = 200.0;
+    }
+}
+
+void SetFocalConstraint( camera_params_t params)
+{
+    params.constrained[6] = true;
+    params.constraints[6] = params.f;
+    params.weights[6] = 5;
+}
+
